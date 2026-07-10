@@ -1,0 +1,279 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  RECEPTIONIST
+}
+
+enum BookingSource {
+  ONLINE_CLIENT
+  ADMIN
+  RECEPTIONIST
+}
+
+enum BookingStatus {
+  PENDING_PAYMENT
+  PAYMENT_UPLOADED
+  CONFIRMED
+  REJECTED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+  EXPIRED
+}
+
+enum PaymentStatus {
+  NOT_PAID
+  PROOF_UPLOADED
+  ADVANCE_CONFIRMED
+  FULLY_PAID
+  PAYMENT_REJECTED
+}
+
+enum NotificationChannel {
+  TELEGRAM
+  SMS
+  EMAIL
+  WHATSAPP
+}
+
+enum StaffTaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
+enum StaffTaskPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  phone        String?
+  email        String?  @unique
+  username     String   @unique
+  passwordHash String
+  role         UserRole
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  createdBookings   Booking[]          @relation("BookedBy")
+  confirmedBookings Booking[]          @relation("ConfirmedBy")
+  cancelledBookings Booking[]          @relation("CancelledBy")
+  verifiedPayments  Payment[]          @relation("PaymentVerifiedBy")
+  bookingLogs       BookingStatusLog[]
+  assignedTasks     StaffTask[]        @relation("TaskAssignedTo")
+  createdTasks      StaffTask[]        @relation("TaskCreatedBy")
+}
+
+model Client {
+  id             String    @id @default(uuid())
+  fullName       String
+  phone          String
+  alternatePhone String?
+  email          String?
+  address        String?
+  birthDate      DateTime?
+  source         String?
+  preferences    String?
+  allergies      String?
+  note           String?
+  internalNote   String?
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  bookings Booking[]
+  tasks    StaffTask[]
+
+  @@index([phone])
+  @@index([isActive])
+}
+
+model Service {
+  id              String   @id @default(uuid())
+  name            String
+  category        String?
+  description     String?
+  price           Decimal  @db.Decimal(12, 2)
+  advanceAmount   Decimal  @db.Decimal(12, 2)
+  durationMinutes Int
+  bufferMinutes   Int      @default(0)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  bookings Booking[]
+}
+
+model WorkingHour {
+  id          String   @id @default(uuid())
+  dayOfWeek   Int
+  openingTime String
+  closingTime String
+  isOpen      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([dayOfWeek])
+}
+
+model BreakTime {
+  id        String   @id @default(uuid())
+  dayOfWeek Int
+  startTime String
+  endTime   String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model DayOff {
+  id        String   @id @default(uuid())
+  title     String
+  date      DateTime
+  startTime String?
+  endTime   String?
+  isFullDay Boolean  @default(true)
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([date])
+}
+
+model BankAccount {
+  id            String   @id @default(uuid())
+  bankName      String
+  accountName   String
+  accountNumber String
+  instructions  String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  payments Payment[]
+}
+
+model Booking {
+  id                String        @id @default(uuid())
+  bookingCode       String        @unique
+  clientId          String
+  serviceId         String
+  startDateTime     DateTime
+  endDateTime       DateTime
+  status            BookingStatus @default(PENDING_PAYMENT)
+  source            BookingSource
+  bookedByUserId    String?
+  confirmedByUserId String?
+  cancelledByUserId String?
+  note              String?
+  expiresAt         DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  client      Client  @relation(fields: [clientId], references: [id])
+  service     Service @relation(fields: [serviceId], references: [id])
+  bookedBy    User?   @relation("BookedBy", fields: [bookedByUserId], references: [id])
+  confirmedBy User?   @relation("ConfirmedBy", fields: [confirmedByUserId], references: [id])
+  cancelledBy User?   @relation("CancelledBy", fields: [cancelledByUserId], references: [id])
+
+  payment          Payment?
+  statusLogs       BookingStatusLog[]
+  notificationLogs NotificationLog[]
+  tasks            StaffTask[]
+
+  @@index([startDateTime])
+  @@index([endDateTime])
+  @@index([status])
+  @@index([source])
+  @@index([bookedByUserId])
+}
+
+model Payment {
+  id                    String        @id @default(uuid())
+  bookingId             String        @unique
+  requiredAdvanceAmount Decimal       @db.Decimal(12, 2)
+  paidAmount            Decimal?      @db.Decimal(12, 2)
+  paymentStatus         PaymentStatus @default(NOT_PAID)
+  paymentMethod         String?
+  bankAccountId         String?
+  screenshotPath        String?
+  verifiedByUserId      String?
+  verifiedAt            DateTime?
+  rejectionReason       String?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  booking     Booking      @relation(fields: [bookingId], references: [id])
+  bankAccount BankAccount? @relation(fields: [bankAccountId], references: [id])
+  verifiedBy  User?        @relation("PaymentVerifiedBy", fields: [verifiedByUserId], references: [id])
+}
+
+model BookingStatusLog {
+  id              String         @id @default(uuid())
+  bookingId       String
+  oldStatus       BookingStatus?
+  newStatus       BookingStatus
+  changedByUserId String?
+  note            String?
+  createdAt       DateTime       @default(now())
+
+  booking   Booking @relation(fields: [bookingId], references: [id])
+  changedBy User?   @relation(fields: [changedByUserId], references: [id])
+}
+
+model NotificationLog {
+  id           String              @id @default(uuid())
+  bookingId    String?
+  channel      NotificationChannel
+  recipient    String
+  message      String
+  status       String
+  errorMessage String?
+  sentAt       DateTime?
+  createdAt    DateTime            @default(now())
+
+  booking Booking? @relation(fields: [bookingId], references: [id])
+}
+
+model StaffTask {
+  id              String            @id @default(uuid())
+  title           String
+  description     String?
+  status          StaffTaskStatus   @default(TODO)
+  priority        StaffTaskPriority @default(NORMAL)
+  assignedToUserId String?
+  createdByUserId String?
+  relatedClientId String?
+  relatedBookingId String?
+  dueAt           DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  assignedTo     User?    @relation("TaskAssignedTo", fields: [assignedToUserId], references: [id])
+  createdBy      User?    @relation("TaskCreatedBy", fields: [createdByUserId], references: [id])
+  relatedClient  Client?  @relation(fields: [relatedClientId], references: [id])
+  relatedBooking Booking? @relation(fields: [relatedBookingId], references: [id])
+
+  @@index([status])
+  @@index([priority])
+  @@index([assignedToUserId])
+  @@index([relatedClientId])
+  @@index([relatedBookingId])
+  @@index([dueAt])
+}

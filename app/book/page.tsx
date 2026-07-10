@@ -1,0 +1,85 @@
+import { prisma } from "@/lib/prisma";
+import { createPublicBooking } from "./actions";
+import { BankAccountSelector } from "@/components/booking/bank-account-selector";
+import { BookingSlotPicker } from "@/components/booking/booking-slot-picker";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+
+export const dynamic = "force-dynamic";
+
+export default async function BookPage() {
+  const [services, bankAccounts] = await Promise.all([
+    prisma.service.findMany({ where: { isActive: true }, orderBy: { name: "asc" } }),
+    prisma.bankAccount.findMany({ where: { isActive: true }, orderBy: { bankName: "asc" } }),
+  ]);
+
+  return (
+    <main className="mx-auto max-w-5xl px-6 py-10">
+      <div className="mb-8">
+        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">Book Appointment</p>
+        <h1 className="font-display text-4xl font-bold">Choose service, time, and upload payment proof.</h1>
+        <p className="mt-3 max-w-2xl text-muted-foreground">Your booking is reviewed after you upload a clear transfer screenshot.</p>
+      </div>
+
+      <form action={createPublicBooking} className="grid gap-6 lg:grid-cols-[1fr_0.85fr]">
+        <section className="space-y-6">
+          <BookingSlotPicker
+            services={services.map((service) => ({
+              id: service.id,
+              name: service.name,
+              description: service.description,
+              price: Number(service.price),
+              advanceAmount: Number(service.advanceAmount),
+              durationMinutes: service.durationMinutes,
+              bufferMinutes: service.bufferMinutes,
+            }))}
+          />
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Your Details</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="fullName">Full name</Label>
+                  <Input id="fullName" name="fullName" required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone</Label>
+                  <Input id="phone" name="phone" required />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email optional</Label>
+                <Input id="email" name="email" type="email" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="note">Note optional</Label>
+                <Textarea id="note" name="note" />
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+
+        <aside className="space-y-6">
+          <BankAccountSelector
+            accounts={bankAccounts.map((account) => ({
+              id: account.id,
+              bankName: account.bankName,
+              accountName: account.accountName,
+              accountNumber: account.accountNumber,
+              instructions: account.instructions,
+            }))}
+          />
+          <Button type="submit" disabled={services.length === 0 || bankAccounts.length === 0}>
+            Send booking request
+          </Button>
+        </aside>
+      </form>
+    </main>
+  );
+}

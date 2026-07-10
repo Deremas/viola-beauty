@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 36 38% 96%;
+  --foreground: 26 24% 12%;
+  --card: 0 0% 100%;
+  --card-foreground: 26 24% 12%;
+  --muted: 34 22% 89%;
+  --muted-foreground: 27 10% 43%;
+  --primary: 348 54% 48%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 157 20% 91%;
+  --secondary-foreground: 160 28% 18%;
+  --accent: 42 72% 56%;
+  --accent-foreground: 29 28% 13%;
+  --destructive: 0 72% 48%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 29 19% 82%;
+  --input: 29 19% 82%;
+  --ring: 348 54% 48%;
+}
+
+* {
+  border-color: hsl(var(--border));
+}
+
+body {
+  min-height: 100vh;
+  background:
+    linear-gradient(120deg, rgb(251 247 239 / 0.94), rgb(245 239 228 / 0.72)),
+    radial-gradient(circle at top left, rgb(212 168 83 / 0.18), transparent 28rem),
+    linear-gradient(135deg, rgb(250 244 232), rgb(241 232 218));
+  color: hsl(var(--foreground));
+}
+
+::selection {
+  background: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+}
+
+.fc {
+  --fc-border-color: hsl(var(--border));
+  --fc-button-bg-color: hsl(var(--foreground));
+  --fc-button-border-color: hsl(var(--foreground));
+  --fc-button-hover-bg-color: hsl(var(--primary));
+  --fc-button-hover-border-color: hsl(var(--primary));
+  --fc-today-bg-color: rgb(212 168 83 / 0.14);
+  font-size: 0.875rem;
+}
