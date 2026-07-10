@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { createPublicBooking } from "./actions";
 import { BankAccountSelector } from "@/components/booking/bank-account-selector";
@@ -9,6 +10,25 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Book an Appointment",
+  description:
+    "Book a Viola Brows and Beauty appointment online. Choose a service, select an available time, and upload advance payment proof for review.",
+  alternates: {
+    canonical: "/book",
+  },
+  openGraph: {
+    title: "Book an Appointment | Viola Brows and Beauty",
+    description:
+      "Choose a service, select an available time, and upload advance payment proof for Viola Brows and Beauty.",
+    url: "/book",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+};
 
 export default async function BookPage() {
   const [services, bankAccounts] = await Promise.all([

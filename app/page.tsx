@@ -1,16 +1,32 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { ArrowRight, Banknote, CalendarCheck, Clock, CopyCheck, Heart, ShieldCheck, Sparkles } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { money } from "@/lib/format";
+import { getSiteUrl, siteDescription, siteName } from "@/lib/seo";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
 export const dynamic = "force-dynamic";
 
+export const metadata: Metadata = {
+  title: "Beauty Appointment Booking",
+  description: siteDescription,
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    title: `${siteName} | Beauty Appointment Booking`,
+    description: siteDescription,
+    url: "/",
+  },
+};
+
 const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 export default async function HomePage() {
   const currentYear = new Date().getFullYear();
+  const siteUrl = getSiteUrl();
   const [services, bankAccounts, workingHours] = await Promise.all([
     prisma.service.findMany({ where: { isActive: true }, orderBy: [{ category: "asc" }, { name: "asc" }] }),
     prisma.bankAccount.findMany({ where: { isActive: true }, orderBy: { bankName: "asc" }, take: 3 }),
@@ -19,9 +35,42 @@ export default async function HomePage() {
 
   const lowestAdvance = services.length > 0 ? Math.min(...services.map((service) => Number(service.advanceAmount))) : null;
   const openDays = summarizeOpenDays(workingHours);
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "BeautySalon",
+    name: siteName,
+    url: siteUrl,
+    description: siteDescription,
+    areaServed: "Addis Ababa",
+    priceRange: services.length > 0 ? `${money(Math.min(...services.map((service) => Number(service.price))))}+` : "ETB",
+    openingHoursSpecification: workingHours.map((hour) => ({
+      "@type": "OpeningHoursSpecification",
+      dayOfWeek: dayNames[hour.dayOfWeek],
+      opens: hour.openingTime,
+      closes: hour.closingTime,
+    })),
+    makesOffer: services.map((service) => ({
+      "@type": "Offer",
+      name: service.name,
+      price: Number(service.price),
+      priceCurrency: "ETB",
+      itemOffered: {
+        "@type": "Service",
+        name: service.name,
+        description: service.description || undefined,
+        serviceType: service.category || "Beauty service",
+      },
+    })),
+  };
 
   return (
     <main className="min-h-screen overflow-hidden">
+      <script
+        type="application/ld+json"
+        suppressHydrationWarning
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
+
       <section className="relative mx-auto grid w-full max-w-7xl gap-10 px-6 py-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:py-16">
         <div className="absolute left-4 top-8 -z-10 h-48 w-48 rounded-full bg-primary/10 blur-3xl" />
         <div className="absolute bottom-12 right-8 -z-10 h-56 w-56 rounded-full bg-accent/20 blur-3xl" />
