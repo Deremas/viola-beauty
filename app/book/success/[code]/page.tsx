@@ -5,6 +5,7 @@ import { StatusBadge } from "@/lib/status";
 import { CopyBookingCode } from "@/components/booking/copy-booking-code";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { PublicHeader } from "@/components/public/public-header";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +18,9 @@ export default async function BookingSuccessPage({ params }: { params: Promise<{
   const bookingCode = booking?.bookingCode || code;
 
   return (
-    <main className="flex min-h-screen items-center px-5 py-10 sm:px-6">
+    <>
+      <PublicHeader />
+      <main className="flex min-h-[calc(100vh-65px)] items-center px-5 py-10 sm:px-6">
       <Card className="mx-auto w-full max-w-3xl overflow-hidden bg-white/90">
         <div className="bg-foreground px-6 py-8 text-white sm:px-8">
           <span className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary">
@@ -69,6 +72,7 @@ export default async function BookingSuccessPage({ params }: { params: Promise<{
           </div>
         </CardContent>
       </Card>
-    </main>
+      </main>
+    </>
   );
 }

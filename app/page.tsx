@@ -6,6 +6,7 @@ import { money } from "@/lib/format";
 import { getSiteUrl, siteDescription, siteName } from "@/lib/seo";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { PublicHeader } from "@/components/public/public-header";
 
 export const dynamic = "force-dynamic";
 
@@ -64,7 +65,9 @@ export default async function HomePage() {
   };
 
   return (
-    <main className="min-h-screen overflow-hidden">
+    <>
+      <PublicHeader />
+      <main className="min-h-screen overflow-hidden">
       <script
         type="application/ld+json"
         suppressHydrationWarning
@@ -252,7 +255,8 @@ export default async function HomePage() {
           Blue Ocean Creatives
         </a>
       </footer>
-    </main>
+      </main>
+    </>
   );
 }
 

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowLeft, SearchCheck } from "lucide-react";
 import { BookingStatusChecker } from "@/components/booking/booking-status-checker";
 import { Button } from "@/components/ui/button";
+import { PublicHeader } from "@/components/public/public-header";
 
 export const metadata: Metadata = {
   title: "Check Booking Status",
@@ -18,7 +19,9 @@ export default async function BookingStatusPage({
   const { code = "" } = await searchParams;
 
   return (
-    <main className="min-h-screen px-5 py-8 sm:px-6 sm:py-12">
+    <>
+      <PublicHeader />
+      <main className="min-h-[calc(100vh-65px)] px-5 py-8 sm:px-6 sm:py-12">
       <div className="mx-auto max-w-5xl">
         <Button asChild variant="outline">
           <Link href="/"><ArrowLeft className="h-4 w-4" />Back to Viola</Link>
@@ -34,6 +37,7 @@ export default async function BookingStatusPage({
         </div>
         <BookingStatusChecker initialCode={code} />
       </div>
-    </main>
+      </main>
+    </>
   );
 }

@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { PublicHeader } from "@/components/public/public-header";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +38,9 @@ export default async function BookPage() {
   ]);
 
   return (
-    <main className="mx-auto max-w-5xl px-6 py-10">
+    <>
+      <PublicHeader />
+      <main className="mx-auto max-w-5xl px-6 py-10">
       <div className="mb-8">
         <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">Book Appointment</p>
         <h1 className="font-display text-4xl font-bold">Choose service, time, and upload payment proof.</h1>
@@ -100,6 +103,7 @@ export default async function BookPage() {
           </Button>
         </aside>
       </form>
-    </main>
+      </main>
+    </>
   );
 }
