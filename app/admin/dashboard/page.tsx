@@ -32,13 +32,13 @@ export default async function DashboardPage() {
     prisma.booking.count({ where: { status: "CONFIRMED", startDateTime: { gte: todayStart, lte: todayEnd } } }),
     prisma.booking.findMany({
       where: { startDateTime: { gte: todayStart, lte: todayEnd }, status: { in: ["PAYMENT_UPLOADED", "CONFIRMED"] } },
-      include: { client: true, service: true, payment: true, bookedBy: true },
+      include: { client: true, service: true, payment: { select: { paymentStatus: true } }, bookedBy: true },
       orderBy: { startDateTime: "asc" },
     }),
     prisma.booking.count({ where: { status: "PAYMENT_UPLOADED" } }),
     prisma.booking.findMany({
       where: { status: "PAYMENT_UPLOADED" },
-      include: { client: true, service: true, payment: { include: { bankAccount: true } }, bookedBy: true },
+      include: { client: true, service: true, payment: { select: { paymentStatus: true, bankAccount: true } }, bookedBy: true },
       orderBy: { updatedAt: "desc" },
       take: 8,
     }),
@@ -57,13 +57,13 @@ export default async function DashboardPage() {
     }),
     prisma.booking.findMany({
       where: { startDateTime: { gte: now }, status: { in: ["PAYMENT_UPLOADED", "CONFIRMED"] } },
-      include: { client: true, service: true, payment: true, bookedBy: true },
+      include: { client: true, service: true, payment: { select: { paymentStatus: true } }, bookedBy: true },
       orderBy: { startDateTime: "asc" },
       take: 8,
     }),
     prisma.booking.findMany({
       where: { source: "RECEPTIONIST" },
-      include: { client: true, service: true, payment: true, bookedBy: true },
+      include: { client: true, service: true, payment: { select: { paymentStatus: true } }, bookedBy: true },
       orderBy: { createdAt: "desc" },
       take: 8,
     }),

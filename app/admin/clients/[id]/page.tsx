@@ -15,7 +15,11 @@ export default async function ClientViewPage({ params }: { params: Promise<{ id:
     where: { id },
     include: {
       bookings: {
-        include: { service: true, payment: true, bookedBy: true },
+        include: {
+          service: true,
+          payment: { select: { paymentStatus: true, requiredAdvanceAmount: true } },
+          bookedBy: true,
+        },
         orderBy: { startDateTime: "desc" },
       },
       tasks: {

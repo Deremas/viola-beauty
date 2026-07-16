@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/permissions";
-import { readLocalPaymentProof } from "@/lib/payment-proof";
+import { readPaymentProof } from "@/lib/payment-proof";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ bookingId: string }> }) {
   await requireUser();
@@ -12,11 +12,14 @@ export async function GET(_request: Request, { params }: { params: Promise<{ boo
   }
 
   try {
-    const proof = await readLocalPaymentProof(payment.screenshotPath);
+    const proof = await readPaymentProof(payment.screenshotPath);
+    const safeFileName = proof.fileName.replace(/[\r\n"\\]/g, "_");
     return new Response(proof.file, {
       headers: {
         "Content-Type": proof.contentType,
-        "Content-Disposition": `inline; filename="${proof.fileName}"`,
+        "Content-Disposition": `inline; filename="${safeFileName}"`,
+        "Cache-Control": "private, no-store",
+        "X-Content-Type-Options": "nosniff",
       },
     });
   } catch (error) {
@@ -24,6 +27,6 @@ export async function GET(_request: Request, { params }: { params: Promise<{ boo
       return Response.json({ error: "Invalid payment proof path" }, { status: 400 });
     }
 
-    return Response.json({ error: "Payment proof file is not available on this server" }, { status: 404 });
+    return Response.json({ error: "Payment proof is not available" }, { status: 404 });
   }
 }

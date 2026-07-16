@@ -22,7 +22,7 @@ export async function GET(request: Request) {
       endDateTime: end ? { lte: new Date(end) } : undefined,
       status: { notIn: ["REJECTED", "EXPIRED"] },
     },
-    include: { client: true, service: true, payment: true, bookedBy: true },
+    include: { client: true, service: true, payment: { select: { paymentStatus: true } }, bookedBy: true },
   });
 
   return Response.json(

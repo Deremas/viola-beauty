@@ -1,5 +1,8 @@
 import { readFile, stat } from "fs/promises";
 import path from "path";
+import { getUploadRoot } from "@/lib/upload-root";
+
+const databaseProofPrefix = "db-proof:v1:";
 
 const contentTypes: Record<string, string> = {
   ".jpg": "image/jpeg",
@@ -8,10 +11,6 @@ const contentTypes: Record<string, string> = {
   ".webp": "image/webp",
   ".pdf": "application/pdf",
 };
-
-function getUploadRoot() {
-  return path.resolve(process.cwd(), process.env.UPLOAD_DIR || "./storage/uploads");
-}
 
 function getSafeProofPath(relativePath: string) {
   const uploadRoot = getUploadRoot();
@@ -29,7 +28,38 @@ export function getProofContentType(filePath: string) {
   return contentTypes[path.extname(filePath).toLowerCase()] || "application/octet-stream";
 }
 
-export async function readLocalPaymentProof(relativePath: string) {
+function isDatabaseProof(value: string) {
+  return value.startsWith(databaseProofPrefix);
+}
+
+function decodeDatabaseProof(value: string) {
+  const [prefix, version, encodedName, encodedType, encodedSize, encodedFile] = value.split(":", 6);
+
+  if (`${prefix}:${version}:` !== databaseProofPrefix || !encodedName || !encodedType || !encodedFile) {
+    throw new Error("Invalid database payment proof");
+  }
+
+  const fileName = Buffer.from(encodedName, "base64url").toString("utf8");
+  const contentType = Buffer.from(encodedType, "base64url").toString("utf8");
+  const file = Buffer.from(encodedFile, "base64");
+  const declaredSize = Number(encodedSize);
+
+  if (!Number.isFinite(declaredSize) || declaredSize !== file.length) {
+    throw new Error("Invalid database payment proof size");
+  }
+
+  return {
+    file,
+    fileName,
+    contentType,
+  };
+}
+
+export async function readPaymentProof(relativePath: string) {
+  if (isDatabaseProof(relativePath)) {
+    return decodeDatabaseProof(relativePath);
+  }
+
   const { filePath } = getSafeProofPath(relativePath);
   const file = await readFile(filePath);
 
@@ -40,8 +70,21 @@ export async function readLocalPaymentProof(relativePath: string) {
   };
 }
 
-export async function getLocalPaymentProofInfo(relativePath: string) {
+export async function getPaymentProofInfo(relativePath: string) {
   try {
+    if (isDatabaseProof(relativePath)) {
+      const proof = decodeDatabaseProof(relativePath);
+
+      return {
+        exists: true,
+        fileName: proof.fileName,
+        contentType: proof.contentType,
+        sizeBytes: proof.file.length,
+        isImage: proof.contentType.startsWith("image/"),
+        isPdf: proof.contentType === "application/pdf",
+      };
+    }
+
     const { filePath } = getSafeProofPath(relativePath);
     const fileStat = await stat(filePath);
     const contentType = getProofContentType(filePath);

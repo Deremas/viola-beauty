@@ -7,7 +7,15 @@ import { Table, Td, Th } from "@/components/ui/table";
 
 export default async function PaymentsPage() {
   const payments = await prisma.payment.findMany({
-    include: { booking: { include: { client: true, service: true } }, bankAccount: true, verifiedBy: true },
+    select: {
+      id: true,
+      bookingId: true,
+      requiredAdvanceAmount: true,
+      paymentStatus: true,
+      createdAt: true,
+      booking: { include: { client: true, service: true } },
+      bankAccount: true,
+    },
     orderBy: { createdAt: "desc" },
     take: 100,
   });

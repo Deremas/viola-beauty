@@ -50,7 +50,7 @@ export default async function BookingsPage({
   const [bookings, totalBookings, services, receptionists] = await Promise.all([
     prisma.booking.findMany({
       where,
-      include: { client: true, service: true, payment: true, bookedBy: true },
+      include: { client: true, service: true, payment: { select: { paymentStatus: true } }, bookedBy: true },
       orderBy: { startDateTime: "desc" },
       skip: (page - 1) * pageSize,
       take: pageSize,

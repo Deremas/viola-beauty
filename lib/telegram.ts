@@ -1,11 +1,23 @@
 import { prisma } from "@/lib/prisma";
 
 export async function sendTelegramBookingAlert(bookingId: string, title = "New Booking Payment Uploaded") {
+  try {
+    await sendTelegramBookingAlertInternal(bookingId, title);
+  } catch (error) {
+    console.error("Telegram booking alert failed", error);
+  }
+}
+
+async function sendTelegramBookingAlertInternal(bookingId: string, title: string) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_ADMIN_CHAT_ID;
   const booking = await prisma.booking.findUnique({
     where: { id: bookingId },
-    include: { client: true, service: true, payment: true },
+    include: {
+      client: true,
+      service: true,
+      payment: { select: { requiredAdvanceAmount: true } },
+    },
   });
 
   if (!booking || !token || !chatId) return;

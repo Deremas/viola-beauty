@@ -5,7 +5,7 @@ import Image from "next/image";
 import { ArrowLeft } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { money, shortDateTime } from "@/lib/format";
-import { formatFileSize, getLocalPaymentProofInfo } from "@/lib/payment-proof";
+import { formatFileSize, getPaymentProofInfo } from "@/lib/payment-proof";
 import { StatusBadge } from "@/lib/status";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -45,7 +45,7 @@ export default async function BookingDetailPage({
   if (!booking) notFound();
 
   const paymentProof = booking.payment?.screenshotPath
-    ? await getLocalPaymentProofInfo(booking.payment.screenshotPath)
+    ? await getPaymentProofInfo(booking.payment.screenshotPath)
     : null;
 
   return (
@@ -351,7 +351,7 @@ function PaymentProof({
   bookingId: string;
   bookingCode: string;
   hasPath: boolean;
-  proof: Awaited<ReturnType<typeof getLocalPaymentProofInfo>> | null;
+  proof: Awaited<ReturnType<typeof getPaymentProofInfo>> | null;
 }) {
   if (!hasPath) {
     return (
