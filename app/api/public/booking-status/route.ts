@@ -114,6 +114,7 @@ function publicBookingStatus(booking: {
     paymentStatus,
     paymentStatusLabel: formatStatus(paymentStatus),
     service: booking.service.name,
+    appointmentTimestamp: booking.startDateTime.toISOString(),
     appointment: formatAppointment(booking.startDateTime),
     lastUpdated: formatAppointment(booking.updatedAt),
     message: statusMessage(booking.status, booking.payment?.paymentStatus),

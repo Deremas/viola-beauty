@@ -292,6 +292,21 @@ model TelegramSubscription {
   @@index([event])
 }
 
+model SmsSetting {
+  id                       String   @id @default("primary")
+  apiTokenEncrypted        String
+  identifierId             String
+  senderName               String
+  isActive                 Boolean  @default(true)
+  notifyPaymentConfirmed   Boolean  @default(true)
+  notifyPaymentRejected    Boolean  @default(true)
+  notifyBookingRescheduled Boolean  @default(true)
+  notifyBookingCancelled   Boolean  @default(true)
+  notifyBookingCompleted   Boolean  @default(false)
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+}
+
 model StaffTask {
   id               String            @id @default(uuid())
   title            String

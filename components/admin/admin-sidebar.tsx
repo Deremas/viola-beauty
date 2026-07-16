@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Banknote, CalendarDays, ClipboardCheck, ClipboardList, LayoutDashboard, LogOut, Send, Settings, Sparkles, Users } from "lucide-react";
+import { Banknote, CalendarDays, ClipboardCheck, ClipboardList, LayoutDashboard, LogOut, MessageSquareText, Send, Settings, Sparkles, Users } from "lucide-react";
 import { logout } from "@/app/admin/actions";
 import { AdminMobileMenu } from "@/components/admin/admin-mobile-menu";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ const nav = [
   { href: "/admin/payments", label: "Payments", icon: Banknote },
   { href: "/admin/settings/services", label: "Settings", icon: Settings },
   { href: "/admin/settings/telegram", label: "Telegram alerts", icon: Send },
+  { href: "/admin/settings/sms", label: "SMS alerts", icon: MessageSquareText },
 ];
 
 export default function AdminSidebar() {

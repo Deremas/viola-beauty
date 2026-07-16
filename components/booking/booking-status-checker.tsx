@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { StatusBadge } from "@/lib/status";
+import { CopyBookingCode } from "@/components/booking/copy-booking-code";
 
 type BookingStatusResult = {
   bookingCode: string;
@@ -14,6 +16,7 @@ type BookingStatusResult = {
   paymentStatus: string;
   paymentStatusLabel: string;
   service: string;
+  appointmentTimestamp: string;
   appointment: string;
   lastUpdated: string;
   message: string;
@@ -69,7 +72,7 @@ export function BookingStatusChecker({ initialCode = "" }: { initialCode?: strin
                 autoComplete="off"
               />
               <p className="mt-2 text-xs leading-5 text-muted-foreground">
-                Leave this empty to see every active booking for your phone number.
+                Leave this empty to see all bookings connected to your phone number.
               </p>
             </div>
             <div>
@@ -120,8 +123,12 @@ function BookingStatusList({ results }: { results: BookingStatusResult[] }) {
   }
 
   const closedStatuses = new Set(["COMPLETED", "CANCELLED", "REJECTED", "EXPIRED", "NO_SHOW"]);
-  const activeBookings = results.filter((booking) => !closedStatuses.has(booking.bookingStatus));
-  const previousBookings = results.filter((booking) => closedStatuses.has(booking.bookingStatus));
+  const activeBookings = results
+    .filter((booking) => !closedStatuses.has(booking.bookingStatus))
+    .sort((a, b) => Date.parse(a.appointmentTimestamp) - Date.parse(b.appointmentTimestamp));
+  const previousBookings = results
+    .filter((booking) => closedStatuses.has(booking.bookingStatus))
+    .sort((a, b) => Date.parse(b.appointmentTimestamp) - Date.parse(a.appointmentTimestamp));
 
   return (
     <div className="space-y-7">
@@ -131,38 +138,71 @@ function BookingStatusList({ results }: { results: BookingStatusResult[] }) {
           Found {results.length} booking{results.length === 1 ? "" : "s"} for this phone number.
         </p>
       </div>
-      <BookingGroup
-        title="Active bookings"
-        emptyText="No active bookings for this phone number."
-        bookings={activeBookings}
-      />
-      <BookingGroup
-        title="Previous bookings"
-        emptyText="No previous bookings for this phone number."
-        bookings={previousBookings}
-      />
+      {activeBookings.length > 0 ? <BookingGroup title="Active bookings" bookings={activeBookings} /> : null}
+      {previousBookings.length > 0 ? <BookingGroup title="Previous bookings" bookings={previousBookings} /> : null}
     </div>
   );
 }
 
 function BookingGroup({
   title,
-  emptyText,
   bookings,
 }: {
   title: string;
-  emptyText: string;
   bookings: BookingStatusResult[];
 }) {
   return (
     <section className="space-y-4">
-      <h3 className="font-display text-xl font-bold">{title}</h3>
-      {bookings.length === 0 ? (
-        <p className="rounded-xl border bg-white/70 p-4 text-sm text-muted-foreground">{emptyText}</p>
-      ) : (
-        bookings.map((booking) => <BookingStatusDetails key={booking.bookingCode} result={booking} />)
-      )}
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="font-display text-xl font-bold">{title}</h3>
+        <span className="rounded-full bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground">{bookings.length}</span>
+      </div>
+      <div className="space-y-3">
+        {bookings.map((booking) => <CompactBooking key={booking.bookingCode} booking={booking} />)}
+      </div>
     </section>
+  );
+}
+
+function CompactBooking({ booking }: { booking: BookingStatusResult }) {
+  return (
+    <details className="group overflow-hidden rounded-xl border bg-white/90 shadow-soft">
+      <summary className="cursor-pointer list-none p-4 marker:hidden hover:bg-muted/30">
+        <div className="grid items-center gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_auto]">
+          <div className="min-w-0">
+            <p className="truncate text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">{booking.bookingCode}</p>
+            <p className="mt-1 truncate font-bold">{booking.service}</p>
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Appointment</p>
+            <p className="mt-1 font-semibold">{booking.appointment}</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+            <StatusBadge status={booking.bookingStatus} />
+            <span className="text-sm font-semibold text-primary group-open:hidden">View details</span>
+            <span className="hidden text-sm font-semibold text-primary group-open:inline">Hide details</span>
+          </div>
+        </div>
+      </summary>
+      <div className="border-t bg-background/50 p-4">
+        <p className="rounded-lg bg-primary/5 p-3 text-sm font-medium leading-6 text-primary">{booking.message}</p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          <MiniDetail label="Booking status"><StatusBadge status={booking.bookingStatus} /></MiniDetail>
+          <MiniDetail label="Payment status"><StatusBadge status={booking.paymentStatus} /></MiniDetail>
+          <MiniDetail label="Last updated"><span className="font-semibold">{booking.lastUpdated}</span></MiniDetail>
+        </div>
+        <div className="mt-4 flex justify-end"><CopyBookingCode code={booking.bookingCode} /></div>
+      </div>
+    </details>
+  );
+}
+
+function MiniDetail({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-lg border bg-white p-3">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">{label}</p>
+      {children}
+    </div>
   );
 }
 

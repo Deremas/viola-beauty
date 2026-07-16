@@ -2,7 +2,7 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from "crypt
 
 function getEncryptionKey() {
   const secret = process.env.AUTH_SECRET;
-  if (!secret) throw new Error("AUTH_SECRET is required to protect the Telegram bot token");
+  if (!secret) throw new Error("AUTH_SECRET is required to protect saved API credentials");
   return createHash("sha256").update(secret).digest();
 }
 
