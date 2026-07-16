@@ -58,6 +58,16 @@ enum StaffTaskPriority {
   URGENT
 }
 
+enum TelegramNotificationEvent {
+  PAYMENT_PROOF_UPLOADED
+  PAYMENT_CONFIRMED
+  PAYMENT_REJECTED
+  BOOKING_RESCHEDULED
+  BOOKING_COMPLETED
+  BOOKING_CANCELLED
+  BOOKING_NO_SHOW
+}
+
 model User {
   id           String   @id @default(uuid())
   name         String
@@ -250,20 +260,52 @@ model NotificationLog {
   booking Booking? @relation(fields: [bookingId], references: [id])
 }
 
+model TelegramBotSetting {
+  id                String   @id @default("primary")
+  botTokenEncrypted String
+  botUsername       String?
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model TelegramRecipient {
+  id            String                 @id @default(uuid())
+  name          String
+  chatId        String                 @unique
+  personalId    String?
+  isActive      Boolean                @default(true)
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+  subscriptions TelegramSubscription[]
+
+  @@index([isActive])
+}
+
+model TelegramSubscription {
+  id          String                    @id @default(uuid())
+  recipientId String
+  event       TelegramNotificationEvent
+  recipient   TelegramRecipient         @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@unique([recipientId, event])
+  @@index([event])
+}
+
 model StaffTask {
-  id              String            @id @default(uuid())
-  title           String
-  description     String?
-  status          StaffTaskStatus   @default(TODO)
-  priority        StaffTaskPriority @default(NORMAL)
+  id               String            @id @default(uuid())
+  title            String
+  description      String?
+  status           StaffTaskStatus   @default(TODO)
+  priority         StaffTaskPriority @default(NORMAL)
   assignedToUserId String?
-  createdByUserId String?
-  relatedClientId String?
+  createdByUserId  String?
+  relatedClientId  String?
   relatedBookingId String?
-  dueAt           DateTime?
-  completedAt     DateTime?
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  dueAt            DateTime?
+  completedAt      DateTime?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 
   assignedTo     User?    @relation("TaskAssignedTo", fields: [assignedToUserId], references: [id])
   createdBy      User?    @relation("TaskCreatedBy", fields: [createdByUserId], references: [id])

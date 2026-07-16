@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Banknote, CalendarDays, ClipboardCheck, ClipboardList, LayoutDashboard, LogOut, Menu, Settings, Sparkles, Users } from "lucide-react";
+import { Banknote, CalendarDays, ClipboardCheck, ClipboardList, LayoutDashboard, LogOut, Menu, Send, Settings, Sparkles, Users } from "lucide-react";
 
 const nav = [
   { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -12,6 +12,7 @@ const nav = [
   { href: "/admin/clients", label: "Clients", icon: Users },
   { href: "/admin/payments", label: "Payments", icon: Banknote },
   { href: "/admin/settings/services", label: "Settings", icon: Settings },
+  { href: "/admin/settings/telegram", label: "Telegram alerts", icon: Send },
 ];
 
 export function AdminMobileMenu({ logoutAction }: { logoutAction: () => Promise<void> }) {

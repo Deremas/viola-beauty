@@ -7,7 +7,7 @@ import { isSlotAvailable, makeBookingCode } from "@/lib/booking-engine";
 import { localDateTimeToUtc } from "@/lib/timezone";
 import { requireUser } from "@/lib/permissions";
 import { savePaymentProof } from "@/lib/upload";
-import { sendTelegramBookingAlert } from "@/lib/telegram";
+import { sendTelegramBookingNotification } from "@/lib/telegram";
 
 export async function createStaffBooking(formData: FormData) {
   const user = await requireUser();
@@ -58,7 +58,13 @@ export async function createStaffBooking(formData: FormData) {
   });
 
   if (hasProof || user.role === "RECEPTIONIST") {
-    await sendTelegramBookingAlert(booking.id, user.role === "RECEPTIONIST" ? "New Receptionist Booking Created" : "New Staff Booking Created");
+    if (hasProof) {
+      await sendTelegramBookingNotification(
+        booking.id,
+        "PAYMENT_PROOF_UPLOADED",
+        user.role === "RECEPTIONIST" ? `Created by receptionist ${user.name || user.id}` : "Created by admin",
+      );
+    }
   }
 
   redirect(`/admin/bookings/${booking.id}`);

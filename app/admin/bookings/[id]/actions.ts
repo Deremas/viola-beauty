@@ -6,6 +6,7 @@ import { isSlotAvailable } from "@/lib/booking-engine";
 import { prisma } from "@/lib/prisma";
 import { canConfirmPayment, requireUser } from "@/lib/permissions";
 import { localDateTimeToUtc } from "@/lib/timezone";
+import { sendTelegramBookingNotification } from "@/lib/telegram";
 
 async function changeStatus(bookingId: string, newStatus: "CANCELLED" | "COMPLETED" | "NO_SHOW") {
   const user = await requireUser();
@@ -24,6 +25,12 @@ async function changeStatus(bookingId: string, newStatus: "CANCELLED" | "COMPLET
       data: { bookingId, oldStatus: booking.status, newStatus, changedByUserId: user.id },
     }),
   ]);
+  const event = {
+    CANCELLED: "BOOKING_CANCELLED",
+    COMPLETED: "BOOKING_COMPLETED",
+    NO_SHOW: "BOOKING_NO_SHOW",
+  }[newStatus] as "BOOKING_CANCELLED" | "BOOKING_COMPLETED" | "BOOKING_NO_SHOW";
+  await sendTelegramBookingNotification(bookingId, event);
   revalidatePath(`/admin/bookings/${bookingId}`);
 }
 
@@ -45,6 +52,7 @@ export async function confirmPayment(formData: FormData) {
       data: { bookingId, oldStatus: booking.status, newStatus: "CONFIRMED", changedByUserId: user.id, note: "Advance payment confirmed" },
     }),
   ]);
+  await sendTelegramBookingNotification(bookingId, "PAYMENT_CONFIRMED");
   revalidatePath(`/admin/bookings/${bookingId}`);
 }
 
@@ -67,6 +75,7 @@ export async function rejectPayment(formData: FormData) {
       data: { bookingId, oldStatus: booking.status, newStatus: "REJECTED", changedByUserId: user.id, note: reason },
     }),
   ]);
+  await sendTelegramBookingNotification(bookingId, "PAYMENT_REJECTED", reason);
   revalidatePath(`/admin/bookings/${bookingId}`);
 }
 
@@ -120,6 +129,8 @@ export async function rescheduleBooking(formData: FormData) {
       },
     }),
   ]);
+
+  await sendTelegramBookingNotification(bookingId, "BOOKING_RESCHEDULED", `Moved from ${oldStart} to ${newStart}`);
 
   revalidatePath(`/admin/bookings/${bookingId}`);
   revalidatePath("/admin/bookings");

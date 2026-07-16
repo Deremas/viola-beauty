@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { ArrowRight, Banknote, CalendarCheck, Clock, CopyCheck, Heart, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowRight, Banknote, CalendarCheck, Clock, CopyCheck, Heart, Search, ShieldCheck, Sparkles } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { money } from "@/lib/format";
 import { getSiteUrl, siteDescription, siteName } from "@/lib/seo";
@@ -100,6 +100,9 @@ export default async function HomePage() {
             </Button>
             <Button asChild variant="outline" size="lg">
               <Link href="#services">View services</Link>
+            </Button>
+            <Button asChild variant="ghost" size="lg">
+              <Link href="/booking-status"><Search className="h-4 w-4" />Check booking status</Link>
             </Button>
           </div>
 
