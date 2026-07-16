@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, LogOut, UserCircle } from "lucide-react";
 import { SessionUser } from "@/lib/permissions";
+import { Button } from "@/components/ui/button";
 
 export function AdminProfileMenu({
   user,
@@ -58,10 +59,10 @@ export function AdminProfileMenu({
             {timezone} timezone display
           </div>
           <form action={logoutAction} className="mt-4">
-            <button className="inline-flex items-center justify-center gap-2 rounded-md bg-destructive px-4 py-2 text-sm font-semibold text-destructive-foreground hover:bg-destructive/90" type="submit">
+            <Button className="w-full" variant="destructive" type="submit" pendingText="Signing out...">
               <LogOut className="h-4 w-4" />
               Sign out
-            </button>
+            </Button>
           </form>
         </div>
       ) : null}

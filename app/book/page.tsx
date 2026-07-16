@@ -98,7 +98,7 @@ export default async function BookPage() {
               instructions: account.instructions,
             }))}
           />
-          <Button type="submit" disabled={services.length === 0 || bankAccounts.length === 0}>
+          <Button type="submit" pendingText="Sending booking request..." disabled={services.length === 0 || bankAccounts.length === 0}>
             Send booking request
           </Button>
         </aside>

@@ -1,4 +1,8 @@
+"use client";
+
 import * as React from "react";
+import { Loader2 } from "lucide-react";
+import { useFormStatus } from "react-dom";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
@@ -31,9 +35,13 @@ export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
   asChild?: boolean;
+  pendingText?: string;
 }
 
-export function Button({ className, variant, size, asChild, children, ...props }: ButtonProps) {
+export function Button({ className, variant, size, asChild, children, pendingText = "Processing...", ...props }: ButtonProps) {
+  const formStatus = useFormStatus();
+  const isPending = !asChild && props.type === "submit" && formStatus.pending;
+
   if (asChild && React.isValidElement(children)) {
     const child = children as React.ReactElement<{ className?: string }>;
     return React.cloneElement(child, {
@@ -41,5 +49,19 @@ export function Button({ className, variant, size, asChild, children, ...props }
     });
   }
 
-  return <button className={cn(buttonVariants({ variant, size, className }))} {...props}>{children}</button>;
+  return (
+    <button
+      className={cn(buttonVariants({ variant, size, className }))}
+      {...props}
+      disabled={props.disabled || isPending}
+      aria-busy={isPending || undefined}
+    >
+      {isPending ? (
+        <>
+          <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+          {size === "icon" ? <span className="sr-only">{pendingText}</span> : pendingText}
+        </>
+      ) : children}
+    </button>
+  );
 }

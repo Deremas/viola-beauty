@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Banknote, CalendarDays, ClipboardCheck, ClipboardList, LayoutDashboard, LogOut, Send, Settings, Sparkles, Users } from "lucide-react";
 import { logout } from "@/app/admin/actions";
 import { AdminMobileMenu } from "@/components/admin/admin-mobile-menu";
+import { Button } from "@/components/ui/button";
 
 const nav = [
   { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -37,10 +38,10 @@ export default function AdminSidebar() {
             </Link>
           ))}
           <form action={logout} className="pt-4">
-            <button className="inline-flex items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-semibold text-destructive hover:bg-destructive/10" type="submit">
+            <Button className="justify-start text-destructive hover:bg-destructive/10" variant="ghost" type="submit" pendingText="Signing out...">
               <LogOut className="h-4 w-4" />
               Sign out
-            </button>
+            </Button>
           </form>
         </nav>
       </aside>

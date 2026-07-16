@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Banknote, CalendarDays, ClipboardCheck, ClipboardList, LayoutDashboard, LogOut, Menu, Send, Settings, Sparkles, Users } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const nav = [
   { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -67,10 +68,10 @@ export function AdminMobileMenu({ logoutAction }: { logoutAction: () => Promise<
               </Link>
             ))}
             <form action={logoutAction}>
-              <button className="inline-flex items-center gap-3 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-3 text-left text-sm font-semibold text-destructive hover:bg-destructive/10" type="submit">
+              <Button className="w-full justify-start" variant="destructive" type="submit" pendingText="Signing out...">
                 <LogOut className="h-4 w-4" />
                 Sign out
-              </button>
+              </Button>
             </form>
           </nav>
         </div>

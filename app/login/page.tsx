@@ -21,7 +21,7 @@ export default function LoginPage() {
               <Label htmlFor="password">Password</Label>
               <Input id="password" name="password" type="password" required />
             </div>
-            <Button type="submit">Sign in to staff dashboard</Button>
+            <Button type="submit" pendingText="Signing in...">Sign in to staff dashboard</Button>
           </form>
         </CardContent>
       </Card>
