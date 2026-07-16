@@ -58,6 +58,27 @@ enum StaffTaskPriority {
   URGENT
 }
 
+enum PermissionKey {
+  VIEW_DASHBOARD
+  VIEW_CALENDAR
+  MANAGE_CALENDAR
+  VIEW_BOOKINGS
+  CREATE_BOOKINGS
+  MANAGE_BOOKINGS
+  CONFIRM_PAYMENTS
+  VIEW_CLIENTS
+  MANAGE_CLIENTS
+  VIEW_PAYMENTS
+  MANAGE_TASKS
+  MANAGE_SERVICES
+  MANAGE_BANK_ACCOUNTS
+  MANAGE_AVAILABILITY
+  MANAGE_STAFF
+  MANAGE_ROLES
+  MANAGE_NOTIFICATIONS
+  VIEW_REPORTS
+}
+
 enum TelegramNotificationEvent {
   PAYMENT_PROOF_UPLOADED
   PAYMENT_CONFIRMED
@@ -69,16 +90,18 @@ enum TelegramNotificationEvent {
 }
 
 model User {
-  id           String   @id @default(uuid())
+  id           String    @id @default(uuid())
   name         String
   phone        String?
-  email        String?  @unique
-  username     String   @unique
+  email        String?   @unique
+  username     String    @unique
   passwordHash String
   role         UserRole
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  staffRoleId  String?
+  isActive     Boolean   @default(true)
+  deletedAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   createdBookings   Booking[]          @relation("BookedBy")
   confirmedBookings Booking[]          @relation("ConfirmedBy")
@@ -87,6 +110,35 @@ model User {
   bookingLogs       BookingStatusLog[]
   assignedTasks     StaffTask[]        @relation("TaskAssignedTo")
   createdTasks      StaffTask[]        @relation("TaskCreatedBy")
+  staffRole         StaffRole?         @relation(fields: [staffRoleId], references: [id])
+
+  @@index([staffRoleId])
+  @@index([deletedAt])
+}
+
+model StaffRole {
+  id          String           @id @default(uuid())
+  name        String           @unique
+  description String?
+  isActive    Boolean          @default(true)
+  isSystem    Boolean          @default(false)
+  deletedAt   DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  users       User[]
+  permissions RolePermission[]
+
+  @@index([deletedAt])
+}
+
+model RolePermission {
+  id          String        @id @default(uuid())
+  staffRoleId String
+  permission  PermissionKey
+  staffRole   StaffRole     @relation(fields: [staffRoleId], references: [id], onDelete: Cascade)
+
+  @@unique([staffRoleId, permission])
+  @@index([permission])
 }
 
 model Client {
@@ -114,19 +166,22 @@ model Client {
 }
 
 model Service {
-  id              String   @id @default(uuid())
+  id              String    @id @default(uuid())
   name            String
   category        String?
   description     String?
-  price           Decimal  @db.Decimal(12, 2)
-  advanceAmount   Decimal  @db.Decimal(12, 2)
+  price           Decimal   @db.Decimal(12, 2)
+  advanceAmount   Decimal   @db.Decimal(12, 2)
   durationMinutes Int
-  bufferMinutes   Int      @default(0)
-  isActive        Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  bufferMinutes   Int       @default(0)
+  isActive        Boolean   @default(true)
+  deletedAt       DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   bookings Booking[]
+
+  @@index([deletedAt])
 }
 
 model WorkingHour {
@@ -166,16 +221,19 @@ model DayOff {
 }
 
 model BankAccount {
-  id            String   @id @default(uuid())
+  id            String    @id @default(uuid())
   bankName      String
   accountName   String
   accountNumber String
   instructions  String?
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  isActive      Boolean   @default(true)
+  deletedAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   payments Payment[]
+
+  @@index([deletedAt])
 }
 
 model Booking {

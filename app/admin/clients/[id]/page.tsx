@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Pencil } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { requirePermission } from "@/lib/permissions";
 import { money, shortDateTime } from "@/lib/format";
 import { StatusBadge } from "@/lib/status";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, Td, Th } from "@/components/ui/table";
 
 export default async function ClientViewPage({ params }: { params: Promise<{ id: string }> }) {
+  await requirePermission("VIEW_CLIENTS");
   const { id } = await params;
   const client = await prisma.client.findUnique({
     where: { id },

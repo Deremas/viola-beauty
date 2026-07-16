@@ -33,8 +33,8 @@ export const metadata: Metadata = {
 
 export default async function BookPage() {
   const [services, bankAccounts] = await Promise.all([
-    prisma.service.findMany({ where: { isActive: true }, orderBy: { name: "asc" } }),
-    prisma.bankAccount.findMany({ where: { isActive: true }, orderBy: { bankName: "asc" } }),
+    prisma.service.findMany({ where: { isActive: true, deletedAt: null }, orderBy: { name: "asc" } }),
+    prisma.bankAccount.findMany({ where: { isActive: true, deletedAt: null }, orderBy: { bankName: "asc" } }),
   ]);
 
   return (

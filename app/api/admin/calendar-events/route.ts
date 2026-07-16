@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { requireUser } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { formatStatus } from "@/lib/format";
 import { appTimezone } from "@/lib/timezone";
 
@@ -12,7 +12,7 @@ function getColor(status: string) {
 }
 
 export async function GET(request: Request) {
-  await requireUser();
+  await requirePermission("VIEW_CALENDAR");
   const { searchParams } = new URL(request.url);
   const start = searchParams.get("start");
   const end = searchParams.get("end");

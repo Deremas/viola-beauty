@@ -65,7 +65,7 @@ async function isWithinConfiguredAvailability(startDateTime: Date, serviceDurati
 }
 
 export async function isSlotAvailable(serviceId: string, startDateTime: Date, bookingIdToIgnore?: string) {
-  const service = await prisma.service.findUnique({ where: { id: serviceId } });
+  const service = await prisma.service.findFirst({ where: { id: serviceId, deletedAt: null } });
   if (!service || !service.isActive) return false;
 
   if (!isBefore(new Date(), startDateTime)) return false;
@@ -90,7 +90,7 @@ export async function getAvailableSlots(serviceId: string, date: string) {
 }
 
 export async function getSlotAvailability(serviceId: string, date: string) {
-  const service = await prisma.service.findUnique({ where: { id: serviceId } });
+  const service = await prisma.service.findFirst({ where: { id: serviceId, deletedAt: null } });
   if (!service || !service.isActive) return [];
 
   const { day, dayEnd } = getStoredDateRange(date);
@@ -161,6 +161,27 @@ export async function getSlotAvailability(serviceId: string, date: string) {
   }
 
   return slots;
+}
+
+export async function getPublicAvailabilityNotice(date: string) {
+  const { day, dayEnd } = getStoredDateRange(date);
+  const dayOfWeek = new Date(`${date}T12:00:00.000Z`).getUTCDay();
+  const [workingHour, fullDayOff, partialDayOff] = await Promise.all([
+    prisma.workingHour.findUnique({ where: { dayOfWeek } }),
+    prisma.dayOff.findFirst({ where: { date: { gte: day, lt: dayEnd }, isFullDay: true }, orderBy: { createdAt: "desc" } }),
+    prisma.dayOff.findFirst({ where: { date: { gte: day, lt: dayEnd }, isFullDay: false }, orderBy: { createdAt: "desc" } }),
+  ]);
+
+  if (fullDayOff) return { type: "closed" as const, title: fullDayOff.title, message: "No appointments are available on this date." };
+  if (!workingHour?.isOpen) return { type: "closed" as const, title: "Closed on this day", message: "Please choose another date." };
+  if (partialDayOff) return {
+    type: "limited" as const,
+    title: partialDayOff.title,
+    message: partialDayOff.startTime && partialDayOff.endTime
+      ? `Appointments are unavailable from ${partialDayOff.startTime} to ${partialDayOff.endTime}. Other available times are shown below.`
+      : "Only limited appointment times are available on this date.",
+  };
+  return null;
 }
 
 function getStoredDateRange(date: string) {

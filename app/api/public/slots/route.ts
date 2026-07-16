@@ -1,4 +1,4 @@
-import { getSlotAvailability } from "@/lib/booking-engine";
+import { getPublicAvailabilityNotice, getSlotAvailability } from "@/lib/booking-engine";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -9,6 +9,9 @@ export async function GET(request: Request) {
     return Response.json({ error: "serviceId and date are required" }, { status: 400 });
   }
 
-  const slots = await getSlotAvailability(serviceId, date);
-  return Response.json({ slots: slots.filter((slot) => slot.isAvailable) });
+  const [slots, notice] = await Promise.all([
+    getSlotAvailability(serviceId, date),
+    getPublicAvailabilityNotice(date),
+  ]);
+  return Response.json({ slots: slots.filter((slot) => slot.isAvailable), notice });
 }

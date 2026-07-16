@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { requirePermission } from "@/lib/permissions";
 import { money } from "@/lib/format";
 import { updateServiceAndRedirect } from "../../../actions";
 import { Button } from "@/components/ui/button";
@@ -12,8 +13,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 export default async function EditServicePage({ params }: { params: Promise<{ id: string }> }) {
+  await requirePermission("MANAGE_SERVICES");
   const { id } = await params;
-  const service = await prisma.service.findUnique({ where: { id } });
+  const service = await prisma.service.findFirst({ where: { id, deletedAt: null } });
   if (!service) notFound();
 
   return (

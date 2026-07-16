@@ -2,15 +2,17 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Pencil } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { requirePermission } from "@/lib/permissions";
 import { money } from "@/lib/format";
 import { StatusBadge } from "@/lib/status";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default async function ViewServicePage({ params }: { params: Promise<{ id: string }> }) {
+  await requirePermission("MANAGE_SERVICES");
   const { id } = await params;
   const service = await prisma.service.findUnique({
-    where: { id },
+    where: { id, deletedAt: null },
     include: { _count: { select: { bookings: true } } },
   });
   if (!service) notFound();

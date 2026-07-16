@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { requirePermission } from "@/lib/permissions";
 import { updateClientAndRedirect } from "../../actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 export default async function ClientEditPage({ params }: { params: Promise<{ id: string }> }) {
+  await requirePermission("MANAGE_CLIENTS");
   const { id } = await params;
   const client = await prisma.client.findUnique({ where: { id } });
   if (!client) notFound();

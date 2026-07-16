@@ -45,7 +45,7 @@ export function AdminProfileMenu({
         </span>
         <span className="text-left">
           <span className="block text-sm font-semibold">{user.name || "Staff"}</span>
-          <span className="block text-xs text-muted-foreground">{user.role}</span>
+          <span className="block text-xs text-muted-foreground">{user.staffRoleName || user.role}</span>
         </span>
         <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
@@ -54,7 +54,7 @@ export function AdminProfileMenu({
         <div className="absolute right-0 top-full z-50 mt-2 w-72 rounded-lg border bg-white p-4 shadow-soft">
           <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Signed in as</p>
           <p className="mt-1 font-semibold">{user.name || "Staff"}</p>
-          <p className="text-sm text-muted-foreground">{user.role}</p>
+          <p className="text-sm text-muted-foreground">{user.staffRoleName || user.role}</p>
           <div className="mt-4 rounded-md bg-background p-3 text-sm text-muted-foreground">
             {timezone} timezone display
           </div>

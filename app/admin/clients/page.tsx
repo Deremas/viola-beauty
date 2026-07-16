@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Eye, Pencil, Power, PowerOff, Trash2 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { requirePermission } from "@/lib/permissions";
 import { shortDateTime } from "@/lib/format";
 import { StatusBadge } from "@/lib/status";
 import { setClientActive, deleteClient } from "./actions";
@@ -9,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, Td, Th } from "@/components/ui/table";
 
 export default async function ClientsPage() {
+  await requirePermission("VIEW_CLIENTS");
   const clients = await prisma.client.findMany({
     include: {
       _count: { select: { bookings: true, tasks: true } },
@@ -21,12 +23,12 @@ export default async function ClientsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-display text-3xl font-bold">Clients</h1>
-        <p className="text-sm text-muted-foreground">Client profiles are created from bookings and can be enriched by staff.</p>
+        <h1 className="font-display text-3xl font-bold">Customers</h1>
+        <p className="text-sm text-muted-foreground">Customer profiles are created from bookings and can be enriched by staff.</p>
       </div>
 
       <Card>
-        <CardHeader><CardTitle>Client list</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Customer list</CardTitle></CardHeader>
         <CardContent className="overflow-x-auto">
           <Table>
             <thead>

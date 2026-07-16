@@ -29,8 +29,8 @@ export default async function HomePage() {
   const currentYear = new Date().getFullYear();
   const siteUrl = getSiteUrl();
   const [services, bankAccounts, workingHours] = await Promise.all([
-    prisma.service.findMany({ where: { isActive: true }, orderBy: [{ category: "asc" }, { name: "asc" }] }),
-    prisma.bankAccount.findMany({ where: { isActive: true }, orderBy: { bankName: "asc" }, take: 3 }),
+    prisma.service.findMany({ where: { isActive: true, deletedAt: null }, orderBy: [{ category: "asc" }, { name: "asc" }] }),
+    prisma.bankAccount.findMany({ where: { isActive: true, deletedAt: null }, orderBy: { bankName: "asc" }, take: 3 }),
     prisma.workingHour.findMany({ where: { isOpen: true }, orderBy: { dayOfWeek: "asc" } }),
   ]);
 

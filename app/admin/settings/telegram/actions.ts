@@ -3,7 +3,7 @@
 import type { TelegramNotificationEvent } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { encryptSecret } from "@/lib/secret";
 import { telegramEventValues } from "@/lib/telegram-events";
 import { sendTelegramTestMessage } from "@/lib/telegram";
@@ -23,7 +23,7 @@ function selectedEvents(formData: FormData): TelegramNotificationEvent[] {
 }
 
 export async function saveTelegramBot(formData: FormData) {
-  await requireAdmin();
+  await requirePermission("MANAGE_NOTIFICATIONS");
   const token = String(formData.get("botToken") || "").trim();
   const existing = await prisma.telegramBotSetting.findUnique({ where: { id: "primary" } });
 
@@ -49,7 +49,7 @@ export async function saveTelegramBot(formData: FormData) {
 }
 
 export async function createTelegramRecipient(formData: FormData) {
-  await requireAdmin();
+  await requirePermission("MANAGE_NOTIFICATIONS");
   const events = selectedEvents(formData);
   if (events.length === 0) throw new Error("Choose at least one notification type");
 
@@ -67,7 +67,7 @@ export async function createTelegramRecipient(formData: FormData) {
 }
 
 export async function updateTelegramRecipient(formData: FormData) {
-  await requireAdmin();
+  await requirePermission("MANAGE_NOTIFICATIONS");
   const id = cleanRequired(formData, "id", "Recipient");
   const events = selectedEvents(formData);
   if (events.length === 0) throw new Error("Choose at least one notification type");
@@ -92,13 +92,13 @@ export async function updateTelegramRecipient(formData: FormData) {
 }
 
 export async function deleteTelegramRecipient(formData: FormData) {
-  await requireAdmin();
+  await requirePermission("MANAGE_NOTIFICATIONS");
   await prisma.telegramRecipient.delete({ where: { id: cleanRequired(formData, "id", "Recipient") } });
   revalidatePath(settingsPath);
 }
 
 export async function testTelegramRecipient(formData: FormData) {
-  await requireAdmin();
+  await requirePermission("MANAGE_NOTIFICATIONS");
   await sendTelegramTestMessage(cleanRequired(formData, "id", "Recipient"));
   revalidatePath(settingsPath);
 }

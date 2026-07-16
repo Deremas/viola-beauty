@@ -1,9 +1,9 @@
 import { prisma } from "@/lib/prisma";
-import { requireUser } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { readPaymentProof } from "@/lib/payment-proof";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ bookingId: string }> }) {
-  await requireUser();
+  await requirePermission("VIEW_PAYMENTS");
   const { bookingId } = await params;
   const payment = await prisma.payment.findUnique({ where: { bookingId } });
 

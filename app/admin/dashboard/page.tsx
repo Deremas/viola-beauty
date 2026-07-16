@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { endOfDay, endOfMonth, startOfDay, startOfMonth, startOfWeek } from "date-fns";
 import { prisma } from "@/lib/prisma";
+import { requirePermission } from "@/lib/permissions";
 import { money, shortDateTime } from "@/lib/format";
 import { StatusBadge } from "@/lib/status";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, Td, Th } from "@/components/ui/table";
 
 export default async function DashboardPage() {
+  await requirePermission("VIEW_DASHBOARD");
   const now = new Date();
   const todayStart = startOfDay(now);
   const todayEnd = endOfDay(now);

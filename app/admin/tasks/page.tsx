@@ -1,6 +1,7 @@
 import { Check, ClipboardCheck, Trash2 } from "lucide-react";
 import { StaffTaskPriority, StaffTaskStatus, UserRole } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { requirePermission } from "@/lib/permissions";
 import { shortDateTime } from "@/lib/format";
 import { StatusBadge } from "@/lib/status";
 import { createTask, deleteTask, updateTaskStatus } from "./actions";
@@ -13,6 +14,7 @@ import { Table, Td, Th } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 
 export default async function TasksPage() {
+  await requirePermission("MANAGE_TASKS");
   const [tasks, staff, clients, bookings] = await Promise.all([
     prisma.staffTask.findMany({
       include: {
@@ -24,7 +26,7 @@ export default async function TasksPage() {
       orderBy: [{ status: "asc" }, { dueAt: "asc" }, { createdAt: "desc" }],
       take: 100,
     }),
-    prisma.user.findMany({ where: { isActive: true, role: { in: [UserRole.ADMIN, UserRole.RECEPTIONIST] } }, orderBy: { name: "asc" } }),
+    prisma.user.findMany({ where: { isActive: true, deletedAt: null, role: { in: [UserRole.ADMIN, UserRole.RECEPTIONIST] } }, orderBy: { name: "asc" } }),
     prisma.client.findMany({ where: { isActive: true }, orderBy: { fullName: "asc" }, take: 200 }),
     prisma.booking.findMany({
       include: { client: true, service: true },

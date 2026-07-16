@@ -25,17 +25,21 @@ type Slot = {
   reason?: string;
 };
 
+type AvailabilityNotice = { type: "closed" | "limited"; title: string; message: string };
+
 export function BookingSlotPicker({ services }: { services: ServiceOption[] }) {
   const [serviceId, setServiceId] = useState(services[0]?.id ?? "");
   const [date, setDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
   const [slots, setSlots] = useState<Slot[]>([]);
+  const [notice, setNotice] = useState<AvailabilityNotice | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const selectedService = services.find((service) => service.id === serviceId);
 
   useEffect(() => {
     setSelectedTime("");
     setSlots([]);
+    setNotice(null);
 
     if (!serviceId || !date) return;
 
@@ -46,7 +50,10 @@ export function BookingSlotPicker({ services }: { services: ServiceOption[] }) {
       signal: controller.signal,
     })
       .then((response) => response.json())
-      .then((data: { slots?: Slot[] }) => setSlots(data.slots ?? []))
+      .then((data: { slots?: Slot[]; notice?: AvailabilityNotice | null }) => {
+        setSlots(data.slots ?? []);
+        setNotice(data.notice ?? null);
+      })
       .catch((error) => {
         if (error.name !== "AbortError") setSlots([]);
       })
@@ -105,10 +112,17 @@ export function BookingSlotPicker({ services }: { services: ServiceOption[] }) {
               {isLoading ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /> : null}
             </div>
 
+            {notice ? (
+              <div className={cn("rounded-md border p-3 text-sm", notice.type === "closed" ? "border-amber-300 bg-amber-50 text-amber-900" : "border-sky-200 bg-sky-50 text-sky-900")}>
+                <p className="font-semibold">{notice.title}</p>
+                <p className="mt-1">{notice.message}</p>
+              </div>
+            ) : null}
+
             {!serviceId || !date ? (
               <p className="rounded-md border bg-muted/60 p-3 text-sm text-muted-foreground">Choose a service and date to see available slots.</p>
             ) : slots.length === 0 && !isLoading ? (
-              <p className="rounded-md border bg-muted/60 p-3 text-sm text-muted-foreground">No available slots for this date.</p>
+              notice?.type === "closed" ? null : <p className="rounded-md border bg-muted/60 p-3 text-sm text-muted-foreground">No available slots for this date.</p>
             ) : (
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {slots.map((slot) => (

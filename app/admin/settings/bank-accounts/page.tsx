@@ -1,98 +1,81 @@
-import type { ReactNode } from "react";
+import Link from "next/link";
+import { Archive, Eye, Pencil, Plus, Power, PowerOff, RotateCcw } from "lucide-react";
 import { prisma } from "@/lib/prisma";
-import { createBankAccount, updateBankAccount } from "../actions";
+import { requirePermission } from "@/lib/permissions";
+import { StatusBadge } from "@/lib/status";
+import { archiveBankAccount, restoreBankAccount, setBankAccountActive } from "../actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { Table, Td, Th } from "@/components/ui/table";
 
 export default async function BankAccountsPage() {
-  const accounts = await prisma.bankAccount.findMany({ orderBy: { bankName: "asc" } });
+  await requirePermission("MANAGE_BANK_ACCOUNTS");
+  const accounts = await prisma.bankAccount.findMany({
+    include: { _count: { select: { payments: true } } },
+    orderBy: [{ deletedAt: "asc" }, { bankName: "asc" }],
+  });
+  const current = accounts.filter((account) => !account.deletedAt);
+  const archived = accounts.filter((account) => account.deletedAt);
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[0.75fr_1fr]">
-      <Card>
-        <CardHeader>
-          <CardTitle>Add bank account</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form action={createBankAccount} className="grid gap-3">
-            <Field label="Bank name">
-              <Input name="bankName" placeholder="Awash Bank" required />
-            </Field>
-            <Field label="Account holder name">
-              <Input name="accountName" placeholder="Viola Brows and Beauty" required />
-            </Field>
-            <Field label="Account number">
-              <Input name="accountNumber" placeholder="0132XXXXXX" required />
-            </Field>
-            <Field label="Client payment instructions">
-              <Textarea name="instructions" placeholder="Transfer the required advance, then upload the receipt screenshot." />
-            </Field>
-            <Label className="flex items-center gap-2">
-              <input name="isActive" type="checkbox" defaultChecked /> Show this account to clients
-            </Label>
-            <Button type="submit">Create bank account</Button>
-          </form>
-        </CardContent>
-      </Card>
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="font-display text-3xl font-bold">Bank accounts</h1>
+          <p className="text-sm text-muted-foreground">Control which payment accounts clients can select during booking.</p>
+        </div>
+        <Button asChild><Link href="/admin/settings/bank-accounts/create"><Plus className="h-4 w-4" />Add bank account</Link></Button>
+      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Bank accounts shown to clients</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {accounts.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No bank accounts have been created yet.</p>
-          ) : null}
+      <AccountTable title="Current bank accounts" accounts={current} />
 
-          {accounts.map((account) => (
-            <form key={account.id} action={updateBankAccount} className="rounded-lg border bg-white p-4 shadow-soft">
-              <input type="hidden" name="id" value={account.id} />
-              <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <h3 className="text-lg font-semibold">{account.bankName}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {account.accountName} - {account.accountNumber}
-                  </p>
-                </div>
-                <Label className="flex items-center gap-2 rounded-md border bg-background px-3 py-2 text-sm font-semibold">
-                  <input name="isActive" type="checkbox" defaultChecked={account.isActive} /> Show to clients
-                </Label>
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-3">
-                <Field label="Bank name">
-                  <Input name="bankName" defaultValue={account.bankName} required />
-                </Field>
-                <Field label="Account holder name">
-                  <Input name="accountName" defaultValue={account.accountName} required />
-                </Field>
-                <Field label="Account number">
-                  <Input name="accountNumber" defaultValue={account.accountNumber} required />
-                </Field>
-                <Field label="Client payment instructions" className="md:col-span-3">
-                  <Textarea name="instructions" defaultValue={account.instructions || ""} />
-                </Field>
-              </div>
-
-              <Button type="submit" variant="outline" className="mt-4">
-                Update bank account settings
-              </Button>
-            </form>
-          ))}
-        </CardContent>
-      </Card>
+      {archived.length > 0 ? (
+        <Card>
+          <CardHeader><CardTitle>Archived bank accounts</CardTitle></CardHeader>
+          <CardContent className="overflow-x-auto">
+            <Table>
+              <thead><tr><Th>Bank</Th><Th>Account holder</Th><Th>Account number</Th><Th>Previous payments</Th><Th>Action</Th></tr></thead>
+              <tbody>{archived.map((account) => (
+                <tr key={account.id}>
+                  <Td className="min-w-52 font-semibold">{account.bankName}</Td>
+                  <Td>{account.accountName}</Td><Td>{account.accountNumber}</Td><Td>{account._count.payments}</Td>
+                  <Td><form action={restoreBankAccount}><input type="hidden" name="id" value={account.id} /><Button type="submit" variant="outline" size="icon" title="Restore bank account"><RotateCcw className="h-4 w-4" /><span className="sr-only">Restore bank account</span></Button></form></Td>
+                </tr>
+              ))}</tbody>
+            </Table>
+          </CardContent>
+        </Card>
+      ) : null}
     </div>
   );
 }
 
-function Field({ label, className, children }: { label: string; className?: string; children: ReactNode }) {
+type AccountRow = Awaited<ReturnType<typeof prisma.bankAccount.findMany<{ include: { _count: { select: { payments: true } } } }>>>[number];
+
+function AccountTable({ title, accounts }: { title: string; accounts: AccountRow[] }) {
   return (
-    <div className={className}>
-      <Label className="mb-2 block text-sm font-semibold">{label}</Label>
-      {children}
-    </div>
+    <Card>
+      <CardHeader><CardTitle>{title}</CardTitle></CardHeader>
+      <CardContent className="overflow-x-auto">
+        <Table>
+          <thead><tr><Th className="min-w-52">Bank</Th><Th>Account holder</Th><Th>Account number</Th><Th>Payments</Th><Th>Status</Th><Th className="min-w-52">Actions</Th></tr></thead>
+          <tbody>
+            {accounts.map((account) => (
+              <tr key={account.id}>
+                <Td className="font-semibold">{account.bankName}</Td><Td>{account.accountName}</Td><Td>{account.accountNumber}</Td><Td>{account._count.payments}</Td>
+                <Td><StatusBadge status={account.isActive ? "ACTIVE" : "INACTIVE"} /></Td>
+                <Td><div className="flex items-center gap-2">
+                  <Button asChild variant="outline" size="icon" title="View bank account"><Link href={`/admin/settings/bank-accounts/${account.id}`}><Eye className="h-4 w-4" /><span className="sr-only">View bank account</span></Link></Button>
+                  <Button asChild variant="outline" size="icon" title="Edit bank account"><Link href={`/admin/settings/bank-accounts/${account.id}/edit`}><Pencil className="h-4 w-4" /><span className="sr-only">Edit bank account</span></Link></Button>
+                  <form action={setBankAccountActive}><input type="hidden" name="id" value={account.id} /><input type="hidden" name="isActive" value={account.isActive ? "false" : "true"} /><Button type="submit" variant="outline" size="icon" title={account.isActive ? "Deactivate bank account" : "Activate bank account"}>{account.isActive ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4" />}<span className="sr-only">{account.isActive ? "Deactivate" : "Activate"} bank account</span></Button></form>
+                  <form action={archiveBankAccount}><input type="hidden" name="id" value={account.id} /><Button type="submit" variant="destructive" size="icon" title="Archive bank account"><Archive className="h-4 w-4" /><span className="sr-only">Archive bank account</span></Button></form>
+                </div></Td>
+              </tr>
+            ))}
+            {accounts.length === 0 ? <tr><Td colSpan={6} className="text-center text-muted-foreground">No bank accounts found.</Td></tr> : null}
+          </tbody>
+        </Table>
+      </CardContent>
+    </Card>
   );
 }

@@ -1,15 +1,19 @@
 import Link from "next/link";
-import { Eye, Pencil, Plus, Power, PowerOff, Trash2 } from "lucide-react";
+import { Archive, Eye, Pencil, Plus, Power, PowerOff, RotateCcw } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { requirePermission } from "@/lib/permissions";
 import { money } from "@/lib/format";
 import { StatusBadge } from "@/lib/status";
-import { deleteService, setServiceActive } from "../actions";
+import { deleteService, restoreService, setServiceActive } from "../actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, Td, Th } from "@/components/ui/table";
 
 export default async function ServicesSettingsPage() {
-  const services = await prisma.service.findMany({ orderBy: { name: "asc" } });
+  await requirePermission("MANAGE_SERVICES");
+  const allServices = await prisma.service.findMany({ orderBy: { name: "asc" } });
+  const services = allServices.filter((service) => !service.deletedAt);
+  const archivedServices = allServices.filter((service) => service.deletedAt);
 
   return (
     <div className="space-y-6">
@@ -90,10 +94,10 @@ export default async function ServicesSettingsPage() {
                           variant="destructive"
                           size="icon"
                           type="submit"
-                          title="Delete service"
-                          aria-label={`Delete ${service.name}`}
+                          title="Archive service"
+                          aria-label={`Archive ${service.name}`}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Archive className="h-4 w-4" />
                         </Button>
                       </form>
                     </div>
@@ -111,6 +115,19 @@ export default async function ServicesSettingsPage() {
           </Table>
         </CardContent>
       </Card>
+      {archivedServices.length > 0 ? (
+        <Card>
+          <CardHeader><CardTitle>Archived services</CardTitle></CardHeader>
+          <CardContent className="space-y-2">
+            {archivedServices.map((service) => (
+              <div key={service.id} className="flex items-center justify-between rounded-lg border p-3">
+                <div><p className="font-semibold">{service.name}</p><p className="text-xs text-muted-foreground">Historical bookings are preserved.</p></div>
+                <form action={restoreService}><input type="hidden" name="id" value={service.id} /><Button type="submit" variant="outline" size="icon" title="Restore service"><RotateCcw className="h-4 w-4" /><span className="sr-only">Restore service</span></Button></form>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      ) : null}
     </div>
   );
 }

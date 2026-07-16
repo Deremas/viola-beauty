@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { requirePermission } from "@/lib/permissions";
 import { createStaffBooking } from "./actions";
 import { BookingSlotPicker } from "@/components/booking/booking-slot-picker";
 import { Button } from "@/components/ui/button";
@@ -8,9 +9,10 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 
 export default async function CreateBookingPage() {
+  await requirePermission("CREATE_BOOKINGS");
   const [services, bankAccounts] = await Promise.all([
-    prisma.service.findMany({ where: { isActive: true }, orderBy: { name: "asc" } }),
-    prisma.bankAccount.findMany({ where: { isActive: true }, orderBy: { bankName: "asc" } }),
+    prisma.service.findMany({ where: { isActive: true, deletedAt: null }, orderBy: { name: "asc" } }),
+    prisma.bankAccount.findMany({ where: { isActive: true, deletedAt: null }, orderBy: { bankName: "asc" } }),
   ]);
 
   return (

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { requireUser } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 
 function optionalString(value: FormDataEntryValue | null) {
   const text = String(value || "").trim();
@@ -16,7 +16,7 @@ function optionalDate(value: FormDataEntryValue | null) {
 }
 
 export async function updateClient(formData: FormData) {
-  await requireUser();
+  await requirePermission("MANAGE_CLIENTS");
   const id = String(formData.get("id"));
 
   await prisma.client.update({
@@ -48,7 +48,7 @@ export async function updateClientAndRedirect(formData: FormData) {
 }
 
 export async function setClientActive(formData: FormData) {
-  await requireUser();
+  await requirePermission("MANAGE_CLIENTS");
   const id = String(formData.get("id"));
   const isActive = String(formData.get("isActive")) === "true";
 
@@ -62,7 +62,7 @@ export async function setClientActive(formData: FormData) {
 }
 
 export async function deleteClient(formData: FormData) {
-  await requireUser();
+  await requirePermission("MANAGE_CLIENTS");
   const id = String(formData.get("id"));
 
   await prisma.client.delete({ where: { id } });

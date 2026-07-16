@@ -4,14 +4,14 @@ import { revalidatePath } from "next/cache";
 import { addMinutes } from "date-fns";
 import { isSlotAvailable } from "@/lib/booking-engine";
 import { prisma } from "@/lib/prisma";
-import { canConfirmPayment, requireUser } from "@/lib/permissions";
+import { canConfirmPayment, requirePermission, requireUser } from "@/lib/permissions";
 import { localDateTimeToUtc } from "@/lib/timezone";
 import { sendTelegramBookingNotification } from "@/lib/telegram";
 import { shortDateTime } from "@/lib/format";
 import { sendClientBookingSms } from "@/lib/sms";
 
 async function changeStatus(bookingId: string, newStatus: "CANCELLED" | "COMPLETED" | "NO_SHOW") {
-  const user = await requireUser();
+  const user = await requirePermission("MANAGE_BOOKINGS");
   const booking = await prisma.booking.findUnique({ where: { id: bookingId }, include: { payment: true } });
   if (!booking) throw new Error("Booking not found");
   if (newStatus === "COMPLETED" && booking.payment?.paymentStatus !== "FULLY_PAID") {
@@ -42,7 +42,7 @@ async function changeStatus(bookingId: string, newStatus: "CANCELLED" | "COMPLET
 export async function confirmPayment(formData: FormData) {
   const bookingId = String(formData.get("bookingId"));
   const user = await requireUser();
-  if (!canConfirmPayment(user.role)) throw new Error("Forbidden");
+  if (!canConfirmPayment(user)) throw new Error("Forbidden");
 
   const booking = await prisma.booking.findUnique({ where: { id: bookingId }, include: { payment: true, service: true } });
   if (!booking || !booking.payment) throw new Error("Booking not found");
@@ -84,7 +84,7 @@ export async function recordAdditionalPayment(formData: FormData) {
   const additionalAmount = Number(formData.get("additionalAmount"));
   const paymentMethod = String(formData.get("paymentMethod") || "").trim();
   const user = await requireUser();
-  if (!canConfirmPayment(user.role)) throw new Error("Forbidden");
+  if (!canConfirmPayment(user)) throw new Error("Forbidden");
   if (!Number.isFinite(additionalAmount) || additionalAmount <= 0) throw new Error("Enter a positive payment amount");
   if (!paymentMethod) throw new Error("Choose a payment method");
 
@@ -127,7 +127,7 @@ export async function rejectPayment(formData: FormData) {
   const bookingId = String(formData.get("bookingId"));
   const reason = String(formData.get("reason") || "Payment rejected");
   const user = await requireUser();
-  if (!canConfirmPayment(user.role)) throw new Error("Forbidden");
+  if (!canConfirmPayment(user)) throw new Error("Forbidden");
 
   const booking = await prisma.booking.findUnique({ where: { id: bookingId }, include: { payment: true } });
   if (!booking || !booking.payment) throw new Error("Booking not found");
@@ -162,7 +162,7 @@ export async function rescheduleBooking(formData: FormData) {
   const bookingId = String(formData.get("bookingId"));
   const date = String(formData.get("date") || "");
   const time = String(formData.get("time") || "");
-  const user = await requireUser();
+  const user = await requirePermission("MANAGE_BOOKINGS");
 
   if (!date || !time) throw new Error("Choose a new date and time");
 

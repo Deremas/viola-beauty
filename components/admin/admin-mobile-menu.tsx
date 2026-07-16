@@ -17,7 +17,9 @@ const nav = [
   { href: "/admin/settings/sms", label: "SMS alerts", icon: MessageSquareText },
 ];
 
-export function AdminMobileMenu({ logoutAction }: { logoutAction: () => Promise<void> }) {
+const iconByHref = Object.fromEntries(nav.map((item) => [item.href, item.icon]));
+
+export function AdminMobileMenu({ logoutAction, items }: { logoutAction: () => Promise<void>; items: Array<{ href: string; label: string }> }) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -62,12 +64,14 @@ export function AdminMobileMenu({ logoutAction }: { logoutAction: () => Promise<
       {open ? (
         <div className="fixed inset-x-4 top-24 z-50">
           <nav className="grid gap-2 rounded-xl border bg-white p-3 shadow-soft">
-            {nav.map((item) => (
+            {items.map((item) => {
+              const Icon = iconByHref[item.href] || Settings;
+              return (
               <Link key={item.href} href={item.href} className="flex items-center gap-3 rounded-md border bg-background/80 px-3 py-3 text-sm font-semibold hover:bg-muted" onClick={() => setOpen(false)}>
-                <item.icon className="h-4 w-4" />
+                <Icon className="h-4 w-4" />
                 {item.label}
               </Link>
-            ))}
+            );})}
             <form action={logoutAction}>
               <Button className="w-full justify-start" variant="destructive" type="submit" pendingText="Signing out...">
                 <LogOut className="h-4 w-4" />

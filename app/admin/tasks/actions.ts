@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { StaffTaskPriority, StaffTaskStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { requireUser } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 
 function optionalString(value: FormDataEntryValue | null) {
   const text = String(value || "").trim();
@@ -17,7 +17,7 @@ function optionalDateTime(date: FormDataEntryValue | null, time: FormDataEntryVa
 }
 
 export async function createTask(formData: FormData) {
-  const user = await requireUser();
+  const user = await requirePermission("MANAGE_TASKS");
 
   await prisma.staffTask.create({
     data: {
@@ -37,7 +37,7 @@ export async function createTask(formData: FormData) {
 }
 
 export async function updateTaskStatus(formData: FormData) {
-  await requireUser();
+  await requirePermission("MANAGE_TASKS");
   const id = String(formData.get("id"));
   const status = String(formData.get("status")) as StaffTaskStatus;
 
@@ -53,7 +53,7 @@ export async function updateTaskStatus(formData: FormData) {
 }
 
 export async function deleteTask(formData: FormData) {
-  await requireUser();
+  await requirePermission("MANAGE_TASKS");
   const id = String(formData.get("id"));
   await prisma.staffTask.delete({ where: { id } });
   revalidatePath("/admin/tasks");

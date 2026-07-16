@@ -5,12 +5,12 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { isSlotAvailable, makeBookingCode } from "@/lib/booking-engine";
 import { localDateTimeToUtc } from "@/lib/timezone";
-import { requireUser } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { savePaymentProof } from "@/lib/upload";
 import { sendTelegramBookingNotification } from "@/lib/telegram";
 
 export async function createStaffBooking(formData: FormData) {
-  const user = await requireUser();
+  const user = await requirePermission("CREATE_BOOKINGS");
   const serviceId = String(formData.get("serviceId"));
   const fullName = String(formData.get("fullName"));
   const phone = String(formData.get("phone"));
@@ -19,9 +19,9 @@ export async function createStaffBooking(formData: FormData) {
   const paymentStatus = String(formData.get("paymentStatus") || "NOT_PAID") as "NOT_PAID" | "PROOF_UPLOADED" | "ADVANCE_CONFIRMED";
   const bankAccountId = String(formData.get("bankAccountId") || "");
   const proofFile = formData.get("paymentProof");
-  const service = await prisma.service.findUnique({ where: { id: serviceId } });
+  const service = await prisma.service.findFirst({ where: { id: serviceId, isActive: true, deletedAt: null } });
   if (!service) throw new Error("Service not found");
-  const bankAccount = bankAccountId ? await prisma.bankAccount.findFirst({ where: { id: bankAccountId, isActive: true } }) : null;
+  const bankAccount = bankAccountId ? await prisma.bankAccount.findFirst({ where: { id: bankAccountId, isActive: true, deletedAt: null } }) : null;
   if (bankAccountId && !bankAccount) throw new Error("Selected bank account is not available");
 
   const startDateTime = localDateTimeToUtc(date, time);

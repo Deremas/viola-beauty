@@ -7,8 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { requirePermission } from "@/lib/permissions";
 
-export default function CreateServicePage() {
+export default async function CreateServicePage() {
+  await requirePermission("MANAGE_SERVICES");
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <Button asChild variant="outline">

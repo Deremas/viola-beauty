@@ -1,8 +1,8 @@
 import { prisma } from "@/lib/prisma";
-import { requireUser } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
-  await requireUser();
+  await requirePermission("VIEW_BOOKINGS");
   const { id } = await params;
   const booking = await prisma.booking.findUnique({
     where: { id },

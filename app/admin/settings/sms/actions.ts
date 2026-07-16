@@ -2,14 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { encryptSecret } from "@/lib/secret";
 import { sendSmsTest } from "@/lib/sms";
 
 const settingsPath = "/admin/settings/sms";
 
 export async function saveSmsSettings(formData: FormData) {
-  await requireAdmin();
+  await requirePermission("MANAGE_NOTIFICATIONS");
   const token = String(formData.get("apiToken") || "").trim();
   const identifierId = String(formData.get("identifierId") || "").trim();
   const senderName = String(formData.get("senderName") || "").trim();
@@ -49,7 +49,7 @@ export async function saveSmsSettings(formData: FormData) {
 }
 
 export async function testSmsSettings(formData: FormData) {
-  await requireAdmin();
+  await requirePermission("MANAGE_NOTIFICATIONS");
   await sendSmsTest(String(formData.get("phone") || ""));
   revalidatePath(settingsPath);
 }

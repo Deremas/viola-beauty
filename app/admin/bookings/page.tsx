@@ -3,6 +3,7 @@ import { Plus } from "lucide-react";
 import { endOfDay, startOfDay } from "date-fns";
 import { BookingSource, BookingStatus, PaymentStatus, UserRole, type Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { requirePermission } from "@/lib/permissions";
 import { formatStatus, shortDateTime } from "@/lib/format";
 import { StatusBadge } from "@/lib/status";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,7 @@ export default async function BookingsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  await requirePermission("VIEW_BOOKINGS");
   const params = await searchParams;
   const status = typeof params.status === "string" ? params.status : "";
   const paymentStatus = typeof params.paymentStatus === "string" ? params.paymentStatus : "";
@@ -56,8 +58,8 @@ export default async function BookingsPage({
       take: pageSize,
     }),
     prisma.booking.count({ where }),
-    prisma.service.findMany({ orderBy: { name: "asc" } }),
-    prisma.user.findMany({ where: { role: UserRole.RECEPTIONIST, isActive: true }, orderBy: { name: "asc" } }),
+    prisma.service.findMany({ where: { deletedAt: null }, orderBy: { name: "asc" } }),
+    prisma.user.findMany({ where: { role: UserRole.RECEPTIONIST, isActive: true, deletedAt: null }, orderBy: { name: "asc" } }),
   ]);
   const totalPages = Math.max(1, Math.ceil(totalBookings / pageSize));
   const fromCount = totalBookings === 0 ? 0 : (page - 1) * pageSize + 1;

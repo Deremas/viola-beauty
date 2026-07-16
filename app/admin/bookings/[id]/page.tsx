@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { requirePermission } from "@/lib/permissions";
 import { money, shortDateTime } from "@/lib/format";
 import { formatFileSize, getPaymentProofInfo } from "@/lib/payment-proof";
 import { StatusBadge } from "@/lib/status";
@@ -27,6 +28,7 @@ export default async function BookingDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await requirePermission("VIEW_BOOKINGS");
   const { id } = await params;
   const booking = await prisma.booking.findUnique({
     where: { id },

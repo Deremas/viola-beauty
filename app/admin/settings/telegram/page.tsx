@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Send, Trash2 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { Button } from "@/components/ui/button";
 import { TelegramNotificationChoices } from "@/components/admin/telegram-notification-choices";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,7 +16,7 @@ import {
 } from "./actions";
 
 export default async function TelegramSettingsPage() {
-  await requireAdmin();
+  await requirePermission("MANAGE_NOTIFICATIONS");
   const [setting, recipients] = await Promise.all([
     prisma.telegramBotSetting.findUnique({ where: { id: "primary" } }),
     prisma.telegramRecipient.findMany({

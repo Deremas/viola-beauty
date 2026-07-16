@@ -1,6 +1,6 @@
 import { MessageSquareText } from "lucide-react";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { saveSmsSettings, testSmsSettings } from "./actions";
 
 export default async function SmsSettingsPage() {
-  await requireAdmin();
+  await requirePermission("MANAGE_NOTIFICATIONS");
   const setting = await prisma.smsSetting.findUnique({ where: { id: "primary" } });
 
   return (

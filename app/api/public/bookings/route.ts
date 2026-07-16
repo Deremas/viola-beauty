@@ -19,9 +19,9 @@ export async function POST(request: Request) {
     bankAccountId: formData.get("bankAccountId"),
   });
 
-  const service = await prisma.service.findFirst({ where: { id: parsed.serviceId, isActive: true } });
+  const service = await prisma.service.findFirst({ where: { id: parsed.serviceId, isActive: true, deletedAt: null } });
   if (!service) return Response.json({ error: "Selected service is not available" }, { status: 400 });
-  const bankAccount = await prisma.bankAccount.findFirst({ where: { id: parsed.bankAccountId, isActive: true } });
+  const bankAccount = await prisma.bankAccount.findFirst({ where: { id: parsed.bankAccountId, isActive: true, deletedAt: null } });
   if (!bankAccount) return Response.json({ error: "Selected bank account is not available" }, { status: 400 });
 
   const startDateTime = localDateTimeToUtc(parsed.date, parsed.time);

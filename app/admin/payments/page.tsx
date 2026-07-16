@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { requirePermission } from "@/lib/permissions";
 import { money, shortDateTime } from "@/lib/format";
 import { StatusBadge } from "@/lib/status";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, Td, Th } from "@/components/ui/table";
 
 export default async function PaymentsPage() {
+  await requirePermission("VIEW_PAYMENTS");
   const payments = await prisma.payment.findMany({
     select: {
       id: true,

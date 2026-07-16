@@ -21,9 +21,9 @@ export async function createPublicBooking(formData: FormData) {
     bankAccountId: formData.get("bankAccountId"),
   });
 
-  const service = await prisma.service.findFirst({ where: { id: parsed.serviceId, isActive: true } });
+  const service = await prisma.service.findFirst({ where: { id: parsed.serviceId, isActive: true, deletedAt: null } });
   if (!service) throw new Error("Selected service is not available");
-  const bankAccount = await prisma.bankAccount.findFirst({ where: { id: parsed.bankAccountId, isActive: true } });
+  const bankAccount = await prisma.bankAccount.findFirst({ where: { id: parsed.bankAccountId, isActive: true, deletedAt: null } });
   if (!bankAccount) throw new Error("Selected bank account is not available");
 
   const startDateTime = localDateTimeToUtc(parsed.date, parsed.time);
