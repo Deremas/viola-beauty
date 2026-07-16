@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { canConfirmPayment, requireUser } from "@/lib/permissions";
 import { localDateTimeToUtc } from "@/lib/timezone";
 import { sendTelegramBookingNotification } from "@/lib/telegram";
+import { shortDateTime } from "@/lib/format";
 
 async function changeStatus(bookingId: string, newStatus: "CANCELLED" | "COMPLETED" | "NO_SHOW") {
   const user = await requireUser();
@@ -111,8 +112,8 @@ export async function rescheduleBooking(formData: FormData) {
   }
 
   const endDateTime = addMinutes(startDateTime, booking.service.durationMinutes + booking.service.bufferMinutes);
-  const oldStart = booking.startDateTime.toLocaleString("en-US");
-  const newStart = startDateTime.toLocaleString("en-US");
+  const oldStart = shortDateTime(booking.startDateTime);
+  const newStart = shortDateTime(startDateTime);
 
   await prisma.$transaction([
     prisma.booking.update({

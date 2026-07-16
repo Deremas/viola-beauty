@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/permissions";
 import { formatStatus } from "@/lib/format";
+import { appTimezone } from "@/lib/timezone";
 
 function getColor(status: string) {
   if (status === "CONFIRMED") return "#16a34a";
@@ -28,7 +29,7 @@ export async function GET(request: Request) {
   return Response.json(
     bookings.map((booking) => ({
       id: booking.id,
-      title: `${booking.startDateTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} - ${booking.client.fullName} - ${booking.service.name}`,
+      title: `${formatCalendarTime(booking.startDateTime)} - ${booking.client.fullName} - ${booking.service.name}`,
       start: booking.startDateTime,
       end: booking.endDateTime,
       backgroundColor: getColor(booking.status),
@@ -46,4 +47,12 @@ export async function GET(request: Request) {
       },
     })),
   );
+}
+
+function formatCalendarTime(value: Date) {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: appTimezone,
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(value);
 }

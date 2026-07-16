@@ -124,11 +124,18 @@ export function BookingSlotPicker({ services }: { services: ServiceOption[] }) {
                       selectedTime === slot.time && "border-primary bg-primary text-primary-foreground hover:bg-primary/90",
                     )}
                   >
-                    {slot.time}
+                    {formatSlotTime(slot.time)}
                   </button>
                 ))}
               </div>
             )}
+
+            {date && selectedTime ? (
+              <div className="rounded-lg border border-primary/25 bg-primary/5 p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">Selected appointment</p>
+                <p className="mt-1 text-lg font-bold">{formatSelectedAppointment(date, selectedTime)}</p>
+              </div>
+            ) : null}
 
             <p className="text-xs text-muted-foreground">Unavailable slots are hidden because they are already booked, outside working hours, during breaks, or blocked by days off.</p>
           </div>
@@ -136,4 +143,25 @@ export function BookingSlotPicker({ services }: { services: ServiceOption[] }) {
       </Card>
     </>
   );
+}
+
+function formatSlotTime(time: string) {
+  const [hour, minute] = time.split(":").map(Number);
+  return new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(2020, 0, 1, hour, minute)));
+}
+
+function formatSelectedAppointment(date: string, time: string) {
+  const [year, month, day] = date.split("-").map(Number);
+  const dateLabel = new Intl.DateTimeFormat("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(year, month - 1, day, 12)));
+  return `${dateLabel}, ${formatSlotTime(time)}`;
 }

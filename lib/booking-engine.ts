@@ -1,6 +1,8 @@
-import { addMinutes, format, isBefore, parseISO, setHours, setMinutes } from "date-fns";
+import { addDays, addMinutes, isBefore } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 import { BookingStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { appDate, appDayOfWeek, appTime, appTimezone, localDateTimeToUtc } from "@/lib/timezone";
 
 const blockingStatuses = [BookingStatus.PAYMENT_UPLOADED, BookingStatus.CONFIRMED];
 
@@ -14,15 +16,14 @@ function rangesOverlap(startA: number, endA: number, startB: number, endB: numbe
 }
 
 async function isWithinConfiguredAvailability(startDateTime: Date, serviceDurationMinutes: number) {
-  const day = new Date(startDateTime);
-  day.setHours(0, 0, 0, 0);
-  const dayEnd = addMinutes(day, 24 * 60);
-  const dayOfWeek = day.getDay();
+  const date = appDate(startDateTime);
+  const { day, dayEnd } = getStoredDateRange(date);
+  const dayOfWeek = appDayOfWeek(startDateTime);
   const workingHour = await prisma.workingHour.findUnique({ where: { dayOfWeek } });
 
   if (!workingHour || !workingHour.isOpen) return false;
 
-  const slotStart = startDateTime.getHours() * 60 + startDateTime.getMinutes();
+  const slotStart = timeToMinutes(appTime(startDateTime));
   const slotEnd = slotStart + serviceDurationMinutes;
   const opening = timeToMinutes(workingHour.openingTime);
   const closing = timeToMinutes(workingHour.closingTime);
@@ -92,8 +93,8 @@ export async function getSlotAvailability(serviceId: string, date: string) {
   const service = await prisma.service.findUnique({ where: { id: serviceId } });
   if (!service || !service.isActive) return [];
 
-  const day = parseISO(`${date}T00:00:00`);
-  const dayOfWeek = day.getDay();
+  const { day, dayEnd } = getStoredDateRange(date);
+  const dayOfWeek = new Date(`${date}T12:00:00.000Z`).getUTCDay();
   const workingHour = await prisma.workingHour.findUnique({ where: { dayOfWeek } });
   if (!workingHour || !workingHour.isOpen) return [];
 
@@ -101,7 +102,7 @@ export async function getSlotAvailability(serviceId: string, date: string) {
     where: {
       date: {
         gte: day,
-        lt: addMinutes(day, 24 * 60),
+        lt: dayEnd,
       },
       isFullDay: true,
     },
@@ -113,7 +114,7 @@ export async function getSlotAvailability(serviceId: string, date: string) {
       where: {
         date: {
           gte: day,
-          lt: addMinutes(day, 24 * 60),
+          lt: dayEnd,
         },
         isFullDay: false,
       },
@@ -126,16 +127,14 @@ export async function getSlotAvailability(serviceId: string, date: string) {
     }),
   ]);
 
-  const [openHour, openMinute] = workingHour.openingTime.split(":").map(Number);
-  const [closeHour, closeMinute] = workingHour.closingTime.split(":").map(Number);
-  let cursor = setMinutes(setHours(day, openHour), openMinute);
-  const close = setMinutes(setHours(day, closeHour), closeMinute);
+  let cursor = localDateTimeToUtc(date, workingHour.openingTime);
+  const close = localDateTimeToUtc(date, workingHour.closingTime);
   const stepMinutes = Math.max(15, service.durationMinutes + service.bufferMinutes);
   const slots: Array<{ time: string; isAvailable: boolean; reason?: string }> = [];
 
   while (!isBefore(close, addMinutes(cursor, service.durationMinutes))) {
     const isPast = !isBefore(new Date(), cursor);
-    const slotStart = cursor.getHours() * 60 + cursor.getMinutes();
+    const slotStart = timeToMinutes(appTime(cursor));
     const slotEnd = slotStart + service.durationMinutes;
     const isInBreak = breakTimes.some((breakTime) =>
       rangesOverlap(slotStart, slotEnd, timeToMinutes(breakTime.startTime), timeToMinutes(breakTime.endTime)),
@@ -146,7 +145,7 @@ export async function getSlotAvailability(serviceId: string, date: string) {
     });
     const hasSpace = await isSlotAvailable(serviceId, cursor);
     slots.push({
-      time: format(cursor, "HH:mm"),
+      time: appTime(cursor),
       isAvailable: !isPast && !isInBreak && !isInPartialDayOff && hasSpace,
       reason: isPast
         ? "Past time"
@@ -164,9 +163,14 @@ export async function getSlotAvailability(serviceId: string, date: string) {
   return slots;
 }
 
+function getStoredDateRange(date: string) {
+  const day = new Date(`${date}T00:00:00.000Z`);
+  return { day, dayEnd: addDays(day, 1) };
+}
+
 export function makeBookingCode() {
   const now = new Date();
-  const stamp = format(now, "yyMMdd");
+  const stamp = formatInTimeZone(now, appTimezone, "yyMMdd");
   const suffix = Math.floor(1000 + Math.random() * 9000);
   return `VB-${stamp}-${suffix}`;
 }

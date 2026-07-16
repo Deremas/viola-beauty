@@ -4,6 +4,7 @@ export function money(value: number | { toString(): string }) {
 
 export function shortDateTime(value: Date) {
   return new Intl.DateTimeFormat("en-US", {
+    timeZone: appTimezone,
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -19,3 +20,4 @@ export function formatStatus(status: string) {
     .map((word) => word[0].toUpperCase() + word.slice(1))
     .join(" ");
 }
+import { appTimezone } from "@/lib/timezone";
