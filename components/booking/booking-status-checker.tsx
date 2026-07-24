@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { CalendarDays, CheckCircle2, Clock3, CreditCard, Search } from "lucide-react";
+import Link from "next/link";
+import { AlertTriangle, CalendarDays, CheckCircle2, Clock3, CreditCard, Download, ExternalLink, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -20,6 +21,15 @@ type BookingStatusResult = {
   appointment: string;
   lastUpdated: string;
   message: string;
+  advanceForfeited: boolean;
+  advanceForfeitedAmount: number;
+  precaution: {
+    title: string;
+    intro: string;
+    instructions: string[];
+    contact: string;
+  } | null;
+  hasFullPrecautions: boolean;
 };
 
 export function BookingStatusChecker({ initialCode = "" }: { initialCode?: string }) {
@@ -186,12 +196,14 @@ function CompactBooking({ booking }: { booking: BookingStatusResult }) {
       </summary>
       <div className="border-t bg-background/50 p-4">
         <p className="rounded-lg bg-primary/5 p-3 text-sm font-medium leading-6 text-primary">{booking.message}</p>
+        {booking.advanceForfeited ? <ExpiredNoShowAction /> : null}
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
           <MiniDetail label="Booking status"><StatusBadge status={booking.bookingStatus} /></MiniDetail>
           <MiniDetail label="Payment status"><StatusBadge status={booking.paymentStatus} /></MiniDetail>
           <MiniDetail label="Last updated"><span className="font-semibold">{booking.lastUpdated}</span></MiniDetail>
         </div>
         <div className="mt-4 flex justify-end"><CopyBookingCode code={booking.bookingCode} /></div>
+        <PrecautionActions booking={booking} />
       </div>
     </details>
   );
@@ -218,14 +230,66 @@ function BookingStatusDetails({ result }: { result: BookingStatusResult }) {
       </div>
       <CardContent className="grid gap-5 p-6">
         <p className="rounded-xl bg-primary/5 p-4 font-medium leading-7 text-primary">{result.message}</p>
+        {result.advanceForfeited ? <ExpiredNoShowAction /> : null}
         <div className="grid gap-3 sm:grid-cols-2">
           <StatusItem icon={CheckCircle2} label="Service" value={result.service} />
           <StatusItem icon={CalendarDays} label="Appointment" value={result.appointment} />
           <StatusItem icon={CreditCard} label="Payment status" value={result.paymentStatusLabel} />
           <StatusItem icon={Clock3} label="Last updated" value={result.lastUpdated} />
         </div>
+        <PrecautionActions booking={result} />
       </CardContent>
     </Card>
+  );
+}
+
+function PrecautionActions({ booking }: { booking: BookingStatusResult }) {
+  const [open, setOpen] = useState(false);
+  if (!booking.precaution && !booking.hasFullPrecautions) return null;
+
+  return (
+    <>
+      <div className="mt-4 flex flex-wrap justify-end gap-2">
+        {booking.precaution ? <Button type="button" variant="outline" onClick={() => setOpen(true)}>View service precautions</Button> : null}
+        {booking.hasFullPrecautions ? <Button asChild variant="outline"><Link href="/precautions" target="_blank"><ExternalLink className="h-4 w-4" />Open full precautions</Link></Button> : null}
+        {booking.hasFullPrecautions ? <Button asChild variant="outline"><a href="/api/public/precautions/current?download=1"><Download className="h-4 w-4" />Download precautions</a></Button> : null}
+      </div>
+      {open && booking.precaution ? (
+        <div className="fixed inset-0 z-[110] overflow-y-auto bg-foreground/70 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" onMouseDown={(event) => { if (event.target === event.currentTarget) setOpen(false); }}>
+          <div className="mx-auto flex min-h-full max-w-2xl items-center">
+            <div className="w-full rounded-2xl border bg-white shadow-2xl">
+              <div className="flex items-start justify-between gap-4 border-b p-5">
+                <div><p className="text-xs font-bold uppercase tracking-[0.16em] text-primary">Your saved service precautions</p><h2 className="mt-2 font-display text-2xl font-bold">{booking.precaution.title}</h2></div>
+                <Button type="button" variant="outline" size="icon" title="Close precautions" onClick={() => setOpen(false)}><X className="h-4 w-4" /><span className="sr-only">Close precautions</span></Button>
+              </div>
+              <div className="max-h-[70vh] overflow-y-auto p-5">
+                {booking.precaution.intro ? <p className="leading-7 text-muted-foreground">{booking.precaution.intro}</p> : null}
+                {booking.precaution.instructions.length ? <ul className="mt-4 list-disc space-y-3 pl-5 leading-6">{booking.precaution.instructions.map((item) => <li key={item}>{item}</li>)}</ul> : null}
+                {booking.precaution.contact ? <div className="mt-5 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-destructive"><p className="font-bold">Contact Viola before attending</p><p className="mt-2 text-sm leading-6">{booking.precaution.contact}</p></div> : null}
+              </div>
+              <div className="flex justify-end border-t p-4"><Button type="button" onClick={() => setOpen(false)}>Close precautions</Button></div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
+  );
+}
+
+function ExpiredNoShowAction() {
+  return (
+    <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-destructive">
+      <div className="flex gap-3">
+        <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
+        <div>
+          <p className="font-bold">A new advance is required</p>
+          <p className="mt-1 text-sm leading-6">The previous advance expired with the missed appointment and cannot be reused or refunded.</p>
+        </div>
+      </div>
+      <div className="mt-4 flex justify-end">
+        <Button asChild><Link href="/book">Book and pay a new advance</Link></Button>
+      </div>
+    </div>
   );
 }
 

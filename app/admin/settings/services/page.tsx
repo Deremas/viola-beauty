@@ -1,8 +1,9 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Archive, Eye, Pencil, Plus, Power, PowerOff, RotateCcw } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/permissions";
-import { money } from "@/lib/format";
+import { formatDuration, money } from "@/lib/format";
 import { StatusBadge } from "@/lib/status";
 import { deleteService, restoreService, setServiceActive } from "../actions";
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,10 @@ import { Table, Td, Th } from "@/components/ui/table";
 
 export default async function ServicesSettingsPage() {
   await requirePermission("MANAGE_SERVICES");
-  const allServices = await prisma.service.findMany({ orderBy: { name: "asc" } });
+  const allServices = await prisma.service.findMany({
+    include: { image: { select: { id: true } } },
+    orderBy: { name: "asc" },
+  });
   const services = allServices.filter((service) => !service.deletedAt);
   const archivedServices = allServices.filter((service) => service.deletedAt);
 
@@ -45,6 +49,7 @@ export default async function ServicesSettingsPage() {
                 <Th>Service time</Th>
                 <Th>Gap between services</Th>
                 <Th>Client visibility</Th>
+                <Th>Precaution pop-up</Th>
                 <Th className="min-w-[14rem]">Actions</Th>
               </tr>
             </thead>
@@ -52,17 +57,21 @@ export default async function ServicesSettingsPage() {
               {services.map((service) => (
                 <tr key={service.id}>
                   <Td className="min-w-[18rem] md:w-[22rem]">
-                    <div className="font-semibold">{service.name}</div>
-                    {service.description ? (
-                      <div className="mt-1 max-w-md text-xs leading-5 text-muted-foreground">{service.description}</div>
-                    ) : null}
+                    <div className="flex items-start gap-3">
+                      {service.image ? <Image unoptimized width={64} height={56} src={`/api/public/services/${service.id}/image`} alt="" className="h-14 w-16 shrink-0 rounded-lg object-cover" /> : null}
+                      <div>
+                        <div className="font-semibold">{service.name}</div>
+                        {service.description ? <div className="mt-1 max-w-md text-xs leading-5 text-muted-foreground">{service.description}</div> : null}
+                      </div>
+                    </div>
                   </Td>
                   <Td>{service.category || "Not set"}</Td>
                   <Td>{money(service.price)}</Td>
                   <Td>{money(service.advanceAmount)}</Td>
-                  <Td>{service.durationMinutes} min</Td>
+                  <Td>{formatDuration(service.durationMinutes)}</Td>
                   <Td>{service.bufferMinutes} min</Td>
                   <Td><StatusBadge status={service.isActive ? "ACTIVE" : "INACTIVE"} /></Td>
+                  <Td><StatusBadge status={service.bookingWarningActive ? "ACTIVE" : "INACTIVE"} /></Td>
                   <Td>
                     <div className="flex items-center gap-2">
                       <Button asChild variant="outline" size="icon" title="View service">
@@ -106,7 +115,7 @@ export default async function ServicesSettingsPage() {
               ))}
               {services.length === 0 ? (
                 <tr>
-                  <Td colSpan={8} className="text-center text-muted-foreground">
+                  <Td colSpan={9} className="text-center text-muted-foreground">
                     No services have been created yet.
                   </Td>
                 </tr>

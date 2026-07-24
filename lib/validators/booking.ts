@@ -19,5 +19,10 @@ export const serviceSchema = z.object({
   advanceAmount: z.coerce.number().nonnegative(),
   durationMinutes: z.coerce.number().int().positive(),
   bufferMinutes: z.coerce.number().int().nonnegative(),
+  bookingWarningTitle: z.string().optional(),
+  bookingWarningIntro: z.string().optional(),
+  bookingWarningInstructions: z.string().optional(),
+  bookingWarningContact: z.string().optional(),
+  bookingWarningActive: z.coerce.boolean().default(false),
   isActive: z.coerce.boolean().default(false),
 });

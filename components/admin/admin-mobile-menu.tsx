@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Banknote, CalendarDays, ClipboardCheck, ClipboardList, LayoutDashboard, LogOut, Menu, MessageSquareText, Send, Settings, Sparkles, Users } from "lucide-react";
+import { Banknote, BarChart3, CalendarDays, ClipboardCheck, ClipboardList, LayoutDashboard, LogOut, Menu, MessageSquareText, Send, Settings, Sparkles, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const nav = [
@@ -12,6 +12,7 @@ const nav = [
   { href: "/admin/tasks", label: "Tasks", icon: ClipboardCheck },
   { href: "/admin/clients", label: "Clients", icon: Users },
   { href: "/admin/payments", label: "Payments", icon: Banknote },
+  { href: "/admin/reports", label: "Reports", icon: BarChart3 },
   { href: "/admin/settings/services", label: "Settings", icon: Settings },
   { href: "/admin/settings/telegram", label: "Telegram alerts", icon: Send },
   { href: "/admin/settings/sms", label: "SMS alerts", icon: MessageSquareText },

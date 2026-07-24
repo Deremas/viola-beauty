@@ -11,6 +11,7 @@
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
     "db:overlap": "tsx prisma/apply-overlap.ts",
+    "db:apply-precautions": "tsx prisma/apply-precautions.ts",
     "db:generate": "prisma generate"
   },
   "dependencies": {

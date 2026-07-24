@@ -1,8 +1,9 @@
 import Link from "next/link";
+import Image from "next/image";
 import type { Metadata } from "next";
 import { ArrowRight, Banknote, CalendarCheck, Clock, CopyCheck, Heart, Search, ShieldCheck, Sparkles } from "lucide-react";
 import { prisma } from "@/lib/prisma";
-import { money } from "@/lib/format";
+import { formatDuration, money } from "@/lib/format";
 import { getSiteUrl, siteDescription, siteName } from "@/lib/seo";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -29,7 +30,11 @@ export default async function HomePage() {
   const currentYear = new Date().getFullYear();
   const siteUrl = getSiteUrl();
   const [services, bankAccounts, workingHours] = await Promise.all([
-    prisma.service.findMany({ where: { isActive: true, deletedAt: null }, orderBy: [{ category: "asc" }, { name: "asc" }] }),
+    prisma.service.findMany({
+      where: { isActive: true, deletedAt: null },
+      include: { image: { select: { id: true } } },
+      orderBy: [{ category: "asc" }, { name: "asc" }],
+    }),
     prisma.bankAccount.findMany({ where: { isActive: true, deletedAt: null }, orderBy: { bankName: "asc" }, take: 3 }),
     prisma.workingHour.findMany({ where: { isOpen: true }, orderBy: { dayOfWeek: "asc" } }),
   ]);
@@ -163,6 +168,7 @@ export default async function HomePage() {
           {services.map((service) => (
             <Card key={service.id} className="bg-white/80">
               <CardContent className="p-5">
+                {service.image ? <Image unoptimized width={720} height={405} src={`/api/public/services/${service.id}/image`} alt={`${service.name} service`} className="mb-5 aspect-[16/9] w-full rounded-xl object-cover" /> : null}
                 <div className="mb-4 flex items-start justify-between gap-3">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
@@ -171,7 +177,7 @@ export default async function HomePage() {
                     <h3 className="mt-1 text-xl font-bold">{service.name}</h3>
                   </div>
                   <span className="rounded-full bg-primary/10 px-3 py-1 text-sm font-semibold text-primary">
-                    {service.durationMinutes} min
+                    {formatDuration(service.durationMinutes)}
                   </span>
                 </div>
                 {service.description ? (

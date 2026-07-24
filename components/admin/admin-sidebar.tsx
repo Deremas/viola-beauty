@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Banknote, CalendarDays, ClipboardCheck, ClipboardList, LayoutDashboard, LogOut, MessageSquareText, Send, Settings, Sparkles, Users } from "lucide-react";
+import { Banknote, BarChart3, CalendarDays, ClipboardCheck, ClipboardList, LayoutDashboard, LogOut, MessageSquareText, Send, Settings, Sparkles, Users } from "lucide-react";
 import { logout } from "@/app/admin/actions";
 import { AdminMobileMenu } from "@/components/admin/admin-mobile-menu";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ const nav = [
   { href: "/admin/tasks", label: "Tasks", icon: ClipboardCheck, permission: "MANAGE_TASKS" },
   { href: "/admin/clients", label: "Customers", icon: Users, permission: "VIEW_CLIENTS" },
   { href: "/admin/payments", label: "Payments", icon: Banknote, permission: "VIEW_PAYMENTS" },
+  { href: "/admin/reports", label: "Reports", icon: BarChart3, permission: "VIEW_REPORTS" },
   { href: "/admin/settings", label: "Settings", icon: Settings, permission: "MANAGE_SERVICES" },
   { href: "/admin/settings/telegram", label: "Telegram alerts", icon: Send, permission: "MANAGE_NOTIFICATIONS" },
   { href: "/admin/settings/sms", label: "SMS alerts", icon: MessageSquareText, permission: "MANAGE_NOTIFICATIONS" },

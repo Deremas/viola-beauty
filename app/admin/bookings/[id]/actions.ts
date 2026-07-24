@@ -10,12 +10,24 @@ import { sendTelegramBookingNotification } from "@/lib/telegram";
 import { shortDateTime } from "@/lib/format";
 import { sendClientBookingSms } from "@/lib/sms";
 
-async function changeStatus(bookingId: string, newStatus: "CANCELLED" | "COMPLETED" | "NO_SHOW") {
+async function changeStatus(bookingId: string, newStatus: "CANCELLED" | "COMPLETED") {
   const user = await requirePermission("MANAGE_BOOKINGS");
   const booking = await prisma.booking.findUnique({ where: { id: bookingId }, include: { payment: true } });
   if (!booking) throw new Error("Booking not found");
+  if (["CANCELLED", "COMPLETED", "REJECTED", "EXPIRED", "NO_SHOW"].includes(booking.status)) {
+    throw new Error("This booking is already closed and cannot be changed");
+  }
   if (newStatus === "COMPLETED" && booking.payment?.paymentStatus !== "FULLY_PAID") {
     throw new Error("Record full payment before completing this booking");
+  }
+  if (newStatus === "COMPLETED" && booking.status !== "CONFIRMED") {
+    throw new Error("Only a confirmed booking can be completed");
+  }
+  if (newStatus === "COMPLETED" && booking.startDateTime.getTime() > Date.now()) {
+    throw new Error("Wait until the appointment start time before marking it completed");
+  }
+  if (newStatus === "CANCELLED" && booking.status === "CONFIRMED" && booking.startDateTime.getTime() <= Date.now()) {
+    throw new Error("A past confirmed appointment cannot be cancelled. Mark it completed or no-show");
   }
 
   await prisma.$transaction([
@@ -33,8 +45,7 @@ async function changeStatus(bookingId: string, newStatus: "CANCELLED" | "COMPLET
   const event = {
     CANCELLED: "BOOKING_CANCELLED",
     COMPLETED: "BOOKING_COMPLETED",
-    NO_SHOW: "BOOKING_NO_SHOW",
-  }[newStatus] as "BOOKING_CANCELLED" | "BOOKING_COMPLETED" | "BOOKING_NO_SHOW";
+  }[newStatus] as "BOOKING_CANCELLED" | "BOOKING_COMPLETED";
   await sendTelegramBookingNotification(bookingId, event);
   revalidatePath(`/admin/bookings/${bookingId}`);
 }
@@ -46,6 +57,9 @@ export async function confirmPayment(formData: FormData) {
 
   const booking = await prisma.booking.findUnique({ where: { id: bookingId }, include: { payment: true, service: true } });
   if (!booking || !booking.payment) throw new Error("Booking not found");
+  if (["CANCELLED", "COMPLETED", "REJECTED", "EXPIRED", "NO_SHOW"].includes(booking.status)) {
+    throw new Error("Payment cannot be reviewed for a closed booking");
+  }
   if (booking.payment.paymentStatus !== "PROOF_UPLOADED") throw new Error("This payment has already been reviewed");
 
   const paidAmount = Number(formData.get("paidAmount"));
@@ -93,6 +107,9 @@ export async function recordAdditionalPayment(formData: FormData) {
     include: { payment: true, service: true },
   });
   if (!booking?.payment) throw new Error("Booking payment not found");
+  if (["CANCELLED", "COMPLETED", "REJECTED", "EXPIRED", "NO_SHOW"].includes(booking.status)) {
+    throw new Error("Payment cannot be changed for a closed booking");
+  }
   if (booking.payment.paymentStatus !== "ADVANCE_CONFIRMED") throw new Error("Additional payment cannot be recorded for this booking");
 
   const currentPaid = Number(booking.payment.paidAmount || booking.payment.requiredAdvanceAmount);
@@ -131,6 +148,9 @@ export async function rejectPayment(formData: FormData) {
 
   const booking = await prisma.booking.findUnique({ where: { id: bookingId }, include: { payment: true } });
   if (!booking || !booking.payment) throw new Error("Booking not found");
+  if (["CANCELLED", "COMPLETED", "REJECTED", "EXPIRED", "NO_SHOW"].includes(booking.status)) {
+    throw new Error("Payment cannot be rejected for a closed booking");
+  }
 
   await prisma.$transaction([
     prisma.payment.update({
@@ -155,7 +175,39 @@ export async function completeBooking(formData: FormData) {
 }
 
 export async function markNoShow(formData: FormData) {
-  await changeStatus(String(formData.get("bookingId")), "NO_SHOW");
+  const bookingId = String(formData.get("bookingId"));
+  const user = await requirePermission("MANAGE_BOOKINGS");
+  const booking = await prisma.booking.findUnique({ where: { id: bookingId }, include: { payment: true } });
+  if (!booking?.payment) throw new Error("Booking payment not found");
+  if (booking.status !== "CONFIRMED") throw new Error("Only a confirmed booking can be marked as a no-show");
+  if (booking.startDateTime.getTime() > Date.now()) throw new Error("Wait until the appointment start time before marking a no-show");
+  if (!["ADVANCE_CONFIRMED", "FULLY_PAID"].includes(booking.payment.paymentStatus)) {
+    throw new Error("The advance payment must be confirmed before marking a no-show");
+  }
+
+  const forfeitedAmount = Number(booking.payment.requiredAdvanceAmount);
+  const now = new Date();
+  const note = `Marked as no-show. Advance of ${forfeitedAmount} ETB forfeited; it is non-refundable and cannot be moved to another booking.`;
+
+  await prisma.$transaction([
+    prisma.booking.update({ where: { id: bookingId }, data: { status: "EXPIRED" } }),
+    prisma.payment.update({
+      where: { bookingId },
+      data: {
+        advanceForfeitedAmount: forfeitedAmount,
+        advanceForfeitedAt: now,
+        advanceForfeitedByUserId: user.id,
+      },
+    }),
+    prisma.bookingStatusLog.create({
+      data: { bookingId, oldStatus: booking.status, newStatus: "EXPIRED", changedByUserId: user.id, note },
+    }),
+  ]);
+
+  await sendTelegramBookingNotification(bookingId, "BOOKING_NO_SHOW", note);
+  revalidatePath(`/admin/bookings/${bookingId}`);
+  revalidatePath("/admin/bookings");
+  revalidatePath("/admin/calendar");
 }
 
 export async function rescheduleBooking(formData: FormData) {
@@ -171,6 +223,12 @@ export async function rescheduleBooking(formData: FormData) {
     include: { service: true },
   });
   if (!booking) throw new Error("Booking not found");
+  if (["CANCELLED", "COMPLETED", "REJECTED", "EXPIRED", "NO_SHOW"].includes(booking.status)) {
+    throw new Error("A closed booking cannot be rescheduled. Create a new booking instead");
+  }
+  if (booking.status === "CONFIRMED" && booking.startDateTime.getTime() <= Date.now()) {
+    throw new Error("A past confirmed appointment cannot be rescheduled. Mark it completed or no-show");
+  }
 
   const startDateTime = localDateTimeToUtc(date, time);
   if (!(await isSlotAvailable(booking.serviceId, startDateTime, booking.id))) {

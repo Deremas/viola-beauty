@@ -1,10 +1,10 @@
 import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ExternalLink } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/permissions";
-import { money, shortDateTime } from "@/lib/format";
+import { formatDuration, money, shortDateTime } from "@/lib/format";
 import { formatFileSize, getPaymentProofInfo } from "@/lib/payment-proof";
 import { StatusBadge } from "@/lib/status";
 import { Button } from "@/components/ui/button";
@@ -35,7 +35,7 @@ export default async function BookingDetailPage({
     include: {
       client: true,
       service: true,
-      payment: { include: { bankAccount: true, verifiedBy: true } },
+      payment: { include: { bankAccount: true, verifiedBy: true, advanceForfeitedBy: true } },
       bookedBy: true,
       confirmedBy: true,
       cancelledBy: true,
@@ -56,10 +56,15 @@ export default async function BookingDetailPage({
   );
   const remainingBalance = Math.max(0, servicePrice - paidAmount);
   const paymentStatus = booking.payment?.paymentStatus;
+  const isClosed = ["CANCELLED", "COMPLETED", "REJECTED", "EXPIRED", "NO_SHOW"].includes(booking.status);
+  const canMarkNoShow = booking.status === "CONFIRMED"
+    && ["ADVANCE_CONFIRMED", "FULLY_PAID"].includes(paymentStatus || "")
+    && booking.startDateTime.getTime() <= Date.now();
 
   const paymentProof = booking.payment?.screenshotPath
     ? await getPaymentProofInfo(booking.payment.screenshotPath)
     : null;
+  const precautionSnapshot = parsePrecautionSnapshot(booking.precautionNoticeSnapshot);
 
   return (
     <div className="space-y-6">
@@ -77,6 +82,15 @@ export default async function BookingDetailPage({
           ) : null}
         </div>
       </div>
+
+      {booking.status === "EXPIRED" && booking.payment?.advanceForfeitedAt ? (
+        <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-5 text-destructive">
+          <p className="font-bold">Expired after a no-show</p>
+          <p className="mt-1 text-sm leading-6">
+            The client missed this appointment. The {money(booking.payment.advanceForfeitedAmount || booking.payment.requiredAdvanceAmount)} advance is non-refundable and cannot be moved to another booking. A new appointment requires a new booking and advance payment.
+          </p>
+        </div>
+      ) : null}
 
       <Card>
         <CardHeader>
@@ -99,7 +113,7 @@ export default async function BookingDetailPage({
               ["Price", money(booking.service.price)],
               [
                 "Service time",
-                `${booking.service.durationMinutes} min service + ${booking.service.bufferMinutes} min gap between services`,
+                `${formatDuration(booking.service.durationMinutes)} service + ${booking.service.bufferMinutes} min gap between services`,
               ],
               ["Starts", shortDateTime(booking.startDateTime)],
               ["Ends", shortDateTime(booking.endDateTime)],
@@ -107,10 +121,26 @@ export default async function BookingDetailPage({
               ["Booked by", booking.bookedBy?.name || "Online Client"],
               ["Created", shortDateTime(booking.createdAt)],
               ["Booking note", booking.note || "No note"],
+              ["Precautions acknowledged", booking.precautionsAcknowledgedAt ? shortDateTime(booking.precautionsAcknowledgedAt) : "Not required or not recorded"],
             ]}
           />
         </CardContent>
       </Card>
+
+      {precautionSnapshot ? (
+        <Card>
+          <CardHeader><CardTitle>Client precaution acknowledgment</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <div className="rounded-xl border bg-muted/30 p-4">
+              <p className="font-bold">{precautionSnapshot.title}</p>
+              {precautionSnapshot.intro ? <p className="mt-2 text-sm text-muted-foreground">{precautionSnapshot.intro}</p> : null}
+              {precautionSnapshot.instructions ? <ul className="mt-3 list-disc space-y-1 pl-5 text-sm">{precautionSnapshot.instructions.split(/\r?\n/).filter(Boolean).map((item) => <li key={item}>{item}</li>)}</ul> : null}
+              {precautionSnapshot.contact ? <p className="mt-4 rounded-lg border border-destructive/25 bg-destructive/5 p-3 text-sm text-destructive"><strong>Contact Viola warning:</strong> {precautionSnapshot.contact}</p> : null}
+            </div>
+            {booking.precautionDocumentId ? <div className="flex justify-end"><Button asChild variant="outline"><Link href={`/api/admin/precautions/${booking.precautionDocumentId}`} target="_blank"><ExternalLink className="h-4 w-4" />Open acknowledged PDF version</Link></Button></div> : null}
+          </CardContent>
+        </Card>
+      ) : null}
 
       <div className="grid gap-6 xl:grid-cols-[1fr_0.8fr]">
         <div className="space-y-6">
@@ -155,6 +185,13 @@ export default async function BookingDetailPage({
                     "Rejection reason",
                     booking.payment?.rejectionReason || "None",
                   ],
+                  ...(booking.payment?.advanceForfeitedAt
+                    ? [
+                        ["Forfeited advance", money(booking.payment.advanceForfeitedAmount || booking.payment.requiredAdvanceAmount)] as [string, ReactNode],
+                        ["Forfeited at", shortDateTime(booking.payment.advanceForfeitedAt)] as [string, ReactNode],
+                        ["Marked no-show by", booking.payment.advanceForfeitedBy?.name || "Staff"] as [string, ReactNode],
+                      ]
+                    : []),
                 ]}
               />
               <PaymentProof
@@ -218,7 +255,7 @@ export default async function BookingDetailPage({
               <CardTitle>Payment review</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {paymentStatus === "PROOF_UPLOADED" ? (
+              {paymentStatus === "PROOF_UPLOADED" && !isClosed ? (
                 <>
                   <form action={confirmPayment} className="grid gap-3">
                     <input type="hidden" name="bookingId" value={booking.id} />
@@ -263,7 +300,7 @@ export default async function BookingDetailPage({
                 </>
               ) : null}
 
-              {paymentStatus === "ADVANCE_CONFIRMED" ? (
+              {paymentStatus === "ADVANCE_CONFIRMED" && !isClosed ? (
                 <>
                   <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
                     Advance payment confirmed. The booking is confirmed and {money(remainingBalance)} remains to be paid.
@@ -313,10 +350,15 @@ export default async function BookingDetailPage({
               {!booking.payment ? (
                 <p className="text-sm text-muted-foreground">No payment record is attached to this booking.</p>
               ) : null}
+              {booking.status === "EXPIRED" && booking.payment?.advanceForfeitedAt ? (
+                <p className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm font-medium text-destructive">
+                  Payment actions are closed because this appointment expired after a no-show.
+                </p>
+              ) : null}
             </CardContent>
           </Card>
 
-          <Card>
+          {!isClosed ? <Card>
             <CardHeader>
               <CardTitle>Reschedule</CardTitle>
             </CardHeader>
@@ -353,31 +395,27 @@ export default async function BookingDetailPage({
                 before saving.
               </p>
             </CardContent>
-          </Card>
+          </Card> : null}
 
           <Card>
             <CardHeader>
               <CardTitle>Booking actions</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-wrap gap-2">
-              {paymentStatus === "FULLY_PAID" ? (
+              {!isClosed && paymentStatus === "FULLY_PAID" ? (
                 <ActionForm action={completeBooking} bookingId={booking.id} label="Mark completed" />
-              ) : (
+              ) : !isClosed ? (
                 <p className="w-full text-sm text-muted-foreground">
                   Record the full service payment before marking this booking completed.
                 </p>
-              )}
-              <ActionForm
-                action={markNoShow}
-                bookingId={booking.id}
-                label="Mark no-show"
-              />
-              <ActionForm
-                action={cancelBooking}
-                bookingId={booking.id}
-                label="Cancel booking"
-                destructive
-              />
+              ) : null}
+              {canMarkNoShow ? (
+                <ActionForm action={markNoShow} bookingId={booking.id} label="Mark no-show and expire" destructive />
+              ) : booking.status === "CONFIRMED" ? (
+                <p className="w-full text-sm text-muted-foreground">No-show can be marked after the appointment start time.</p>
+              ) : null}
+              {!isClosed ? <ActionForm action={cancelBooking} bookingId={booking.id} label="Cancel booking" destructive /> : null}
+              {isClosed ? <p className="text-sm text-muted-foreground">This booking is closed. No further booking actions are available.</p> : null}
             </CardContent>
           </Card>
 
@@ -396,6 +434,9 @@ export default async function BookingDetailPage({
                     "Cancelled by",
                     booking.cancelledBy?.name || "Not cancelled",
                   ],
+                  ...(booking.payment?.advanceForfeitedAt
+                    ? [["No-show marked by", booking.payment.advanceForfeitedBy?.name || "Staff"] as [string, ReactNode]]
+                    : []),
                 ]}
               />
             </CardContent>
@@ -434,6 +475,15 @@ function InfoTable({
       </Table>
     </div>
   );
+}
+
+function parsePrecautionSnapshot(value: string | null) {
+  if (!value) return null;
+  try {
+    return JSON.parse(value) as { title: string; intro?: string | null; instructions?: string | null; contact?: string | null };
+  } catch {
+    return null;
+  }
 }
 
 function PaymentProof({
@@ -507,7 +557,7 @@ function ActionForm({
   return (
     <form action={action}>
       <input type="hidden" name="bookingId" value={bookingId} />
-      <Button variant={destructive ? "destructive" : "outline"} type="submit">
+      <Button variant={destructive ? "destructive" : "outline"} type="submit" pendingText="Saving change...">
         {label}
       </Button>
     </form>

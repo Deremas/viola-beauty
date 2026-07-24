@@ -33,7 +33,11 @@ export const metadata: Metadata = {
 
 export default async function BookPage() {
   const [services, bankAccounts] = await Promise.all([
-    prisma.service.findMany({ where: { isActive: true, deletedAt: null }, orderBy: { name: "asc" } }),
+    prisma.service.findMany({
+      where: { isActive: true, deletedAt: null },
+      include: { image: { select: { id: true } } },
+      orderBy: { name: "asc" },
+    }),
     prisma.bankAccount.findMany({ where: { isActive: true, deletedAt: null }, orderBy: { bankName: "asc" } }),
   ]);
 
@@ -47,6 +51,15 @@ export default async function BookPage() {
         <p className="mt-3 max-w-2xl text-muted-foreground">Your booking is reviewed after you upload a clear transfer screenshot.</p>
       </div>
 
+      <div className="mb-6 rounded-xl border border-amber-300 bg-amber-50 p-5 text-amber-950">
+        <h2 className="font-display text-lg font-bold">Advance payment policy</h2>
+        <ul className="mt-2 grid gap-1 text-sm leading-6 sm:grid-cols-3 sm:gap-4">
+          <li>Payment proof is required for every booking.</li>
+          <li>Your appointment is confirmed after staff verifies the advance.</li>
+          <li>If you miss a confirmed appointment, it expires. The advance is non-refundable, cannot be reused, and a new booking requires a new advance.</li>
+        </ul>
+      </div>
+
       <form action={createPublicBooking} className="grid gap-6 lg:grid-cols-[1fr_0.85fr]">
         <section className="space-y-6">
           <BookingSlotPicker
@@ -58,7 +71,14 @@ export default async function BookPage() {
               advanceAmount: Number(service.advanceAmount),
               durationMinutes: service.durationMinutes,
               bufferMinutes: service.bufferMinutes,
+              bookingWarningTitle: service.bookingWarningTitle,
+              bookingWarningIntro: service.bookingWarningIntro,
+              bookingWarningInstructions: service.bookingWarningInstructions,
+              bookingWarningContact: service.bookingWarningContact,
+              bookingWarningActive: service.bookingWarningActive,
+              hasImage: Boolean(service.image),
             }))}
+            requirePrecautionAcknowledgement
           />
 
           <Card>

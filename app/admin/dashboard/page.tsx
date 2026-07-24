@@ -48,7 +48,14 @@ export default async function DashboardPage() {
     prisma.booking.count({ where: { createdAt: { gte: monthStart, lte: monthEnd } } }),
     prisma.booking.count({ where: { status: "COMPLETED" } }),
     prisma.booking.count({ where: { status: "CANCELLED" } }),
-    prisma.booking.count({ where: { status: "NO_SHOW" } }),
+    prisma.booking.count({
+      where: {
+        OR: [
+          { status: "NO_SHOW" },
+          { payment: { is: { advanceForfeitedAt: { not: null } } } },
+        ],
+      },
+    }),
     prisma.payment.aggregate({ where: { paymentStatus: { in: ["ADVANCE_CONFIRMED", "FULLY_PAID"] } }, _sum: { requiredAdvanceAmount: true } }),
     prisma.payment.aggregate({
       where: {
@@ -78,7 +85,7 @@ export default async function DashboardPage() {
     ["This Month's Bookings", monthBookings],
     ["Completed Sessions", completed],
     ["Cancelled Bookings", cancelled],
-    ["No-Shows", noShows],
+    ["Expired No-Shows", noShows],
     ["Advance Collected", money(advancePayments._sum.requiredAdvanceAmount || 0)],
     ["This Month Advance", money(monthAdvancePayments._sum.requiredAdvanceAmount || 0)],
   ];

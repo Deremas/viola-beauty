@@ -16,21 +16,22 @@ export async function createStaffBooking(formData: FormData) {
   const phone = String(formData.get("phone"));
   const date = String(formData.get("date"));
   const time = String(formData.get("time"));
-  const paymentStatus = String(formData.get("paymentStatus") || "NOT_PAID") as "NOT_PAID" | "PROOF_UPLOADED" | "ADVANCE_CONFIRMED";
+  const paymentStatus = String(formData.get("paymentStatus") || "PROOF_UPLOADED") as "PROOF_UPLOADED" | "ADVANCE_CONFIRMED";
   const bankAccountId = String(formData.get("bankAccountId") || "");
   const proofFile = formData.get("paymentProof");
   const service = await prisma.service.findFirst({ where: { id: serviceId, isActive: true, deletedAt: null } });
   if (!service) throw new Error("Service not found");
-  const bankAccount = bankAccountId ? await prisma.bankAccount.findFirst({ where: { id: bankAccountId, isActive: true, deletedAt: null } }) : null;
-  if (bankAccountId && !bankAccount) throw new Error("Selected bank account is not available");
+  if (!bankAccountId) throw new Error("Choose the bank account used for payment");
+  const bankAccount = await prisma.bankAccount.findFirst({ where: { id: bankAccountId, isActive: true, deletedAt: null } });
+  if (!bankAccount) throw new Error("Selected bank account is not available");
+  if (!(proofFile instanceof File) || proofFile.size === 0) throw new Error("Payment proof is required");
+  if (!(["PROOF_UPLOADED", "ADVANCE_CONFIRMED"] as string[]).includes(paymentStatus)) throw new Error("Choose a valid payment review status");
 
   const startDateTime = localDateTimeToUtc(date, time);
   if (!(await isSlotAvailable(service.id, startDateTime))) throw new Error("Slot is unavailable");
   const bookingCode = makeBookingCode();
-  const hasProof = proofFile instanceof File && proofFile.size > 0;
-  const screenshotPath = hasProof ? await savePaymentProof(proofFile, bookingCode) : null;
-  const finalPaymentStatus = paymentStatus === "ADVANCE_CONFIRMED" ? "ADVANCE_CONFIRMED" : hasProof ? "PROOF_UPLOADED" : paymentStatus;
-  const status = finalPaymentStatus === "ADVANCE_CONFIRMED" ? "CONFIRMED" : finalPaymentStatus === "PROOF_UPLOADED" ? "PAYMENT_UPLOADED" : "PENDING_PAYMENT";
+  const screenshotPath = await savePaymentProof(proofFile, bookingCode);
+  const status = paymentStatus === "ADVANCE_CONFIRMED" ? "CONFIRMED" : "PAYMENT_UPLOADED";
 
   const booking = await prisma.booking.create({
     data: {
@@ -46,8 +47,10 @@ export async function createStaffBooking(formData: FormData) {
       payment: {
         create: {
           requiredAdvanceAmount: service.advanceAmount,
-          paymentStatus: finalPaymentStatus,
-          bankAccount: bankAccount ? { connect: { id: bankAccount.id } } : undefined,
+          paymentStatus,
+          paidAmount: paymentStatus === "ADVANCE_CONFIRMED" ? service.advanceAmount : undefined,
+          paymentMethod: paymentStatus === "ADVANCE_CONFIRMED" ? "Bank transfer" : undefined,
+          bankAccount: { connect: { id: bankAccount.id } },
           screenshotPath,
           verifiedBy: status === "CONFIRMED" ? { connect: { id: user.id } } : undefined,
           verifiedAt: status === "CONFIRMED" ? new Date() : null,
@@ -57,15 +60,11 @@ export async function createStaffBooking(formData: FormData) {
     },
   });
 
-  if (hasProof || user.role === "RECEPTIONIST") {
-    if (hasProof) {
-      await sendTelegramBookingNotification(
-        booking.id,
-        "PAYMENT_PROOF_UPLOADED",
-        user.role === "RECEPTIONIST" ? `Created by receptionist ${user.name || user.id}` : "Created by admin",
-      );
-    }
-  }
+  await sendTelegramBookingNotification(
+    booking.id,
+    "PAYMENT_PROOF_UPLOADED",
+    user.role === "RECEPTIONIST" ? `Created by receptionist ${user.name || user.id}` : "Created by admin",
+  );
 
   redirect(`/admin/bookings/${booking.id}`);
 }

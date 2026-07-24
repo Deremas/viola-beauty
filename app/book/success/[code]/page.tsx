@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CheckCircle2, Search, ShieldCheck } from "lucide-react";
+import { CheckCircle2, FileText, Search, ShieldCheck } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { StatusBadge } from "@/lib/status";
 import { CopyBookingCode } from "@/components/booking/copy-booking-code";
@@ -63,6 +63,7 @@ export default async function BookingSuccessPage({ params }: { params: Promise<{
           </div>
 
           <div className="flex flex-wrap justify-end gap-3">
+            <Button asChild variant="outline"><Link href="/precautions"><FileText className="h-4 w-4" />Review full precautions</Link></Button>
             <Button asChild variant="outline"><Link href="/">Back to home</Link></Button>
             <Button asChild>
               <Link href={`/booking-status?code=${encodeURIComponent(bookingCode)}`}>

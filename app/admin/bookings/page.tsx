@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
-import { endOfDay, startOfDay } from "date-fns";
 import { BookingSource, BookingStatus, PaymentStatus, UserRole, type Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { appDateRange } from "@/lib/timezone";
 import { requirePermission } from "@/lib/permissions";
 import { formatStatus, shortDateTime } from "@/lib/format";
 import { StatusBadge } from "@/lib/status";
@@ -38,8 +38,8 @@ export default async function BookingsPage({
     bookedByUserId: receptionistId || undefined,
     startDateTime: dateFrom || dateTo
       ? {
-          gte: dateFrom ? startOfDay(new Date(`${dateFrom}T00:00:00`)) : undefined,
-          lte: dateTo ? endOfDay(new Date(`${dateTo}T00:00:00`)) : undefined,
+          gte: dateFrom ? appDateRange(dateFrom).start : undefined,
+          lt: dateTo ? appDateRange(dateTo).end : undefined,
         }
       : undefined,
     payment: paymentStatus ? { paymentStatus: paymentStatus as PaymentStatus } : undefined,

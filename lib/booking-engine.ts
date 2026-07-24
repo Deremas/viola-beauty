@@ -2,6 +2,7 @@ import { addDays, addMinutes, isBefore } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import { BookingStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { getBookingSlotInterval } from "@/lib/booking-settings";
 import { appDate, appDayOfWeek, appTime, appTimezone, localDateTimeToUtc } from "@/lib/timezone";
 
 const blockingStatuses = [BookingStatus.PAYMENT_UPLOADED, BookingStatus.CONFIRMED];
@@ -129,7 +130,7 @@ export async function getSlotAvailability(serviceId: string, date: string) {
 
   let cursor = localDateTimeToUtc(date, workingHour.openingTime);
   const close = localDateTimeToUtc(date, workingHour.closingTime);
-  const stepMinutes = Math.max(15, service.durationMinutes + service.bufferMinutes);
+  const stepMinutes = await getBookingSlotInterval();
   const slots: Array<{ time: string; isAvailable: boolean; reason?: string }> = [];
 
   while (!isBefore(close, addMinutes(cursor, service.durationMinutes))) {

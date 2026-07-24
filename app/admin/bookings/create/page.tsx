@@ -35,22 +35,31 @@ export default async function CreateBookingPage() {
             <div className="space-y-2"><Label htmlFor="fullName">Client name</Label><Input id="fullName" name="fullName" required /></div>
             <div className="space-y-2"><Label htmlFor="phone">Phone</Label><Input id="phone" name="phone" required /></div>
           </div>
-          <Select name="paymentStatus" defaultValue="NOT_PAID">
-            <option value="NOT_PAID">Not paid</option>
-            <option value="PROOF_UPLOADED">Proof uploaded</option>
-            <option value="ADVANCE_CONFIRMED">Advance confirmed</option>
-          </Select>
-          <Select name="bankAccountId">
-            <option value="">Bank account used optional</option>
-            {bankAccounts.map((account) => (
-              <option key={account.id} value={account.id}>
-                {account.bankName} - {account.accountNumber}
-              </option>
-            ))}
-          </Select>
           <div className="space-y-2">
-            <Label htmlFor="paymentProof">Payment proof optional</Label>
-            <Input id="paymentProof" name="paymentProof" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" />
+            <Label htmlFor="paymentStatus">Payment review</Label>
+            <Select id="paymentStatus" name="paymentStatus" defaultValue="PROOF_UPLOADED" required>
+              <option value="PROOF_UPLOADED">Send proof for review</option>
+              <option value="ADVANCE_CONFIRMED">Advance already verified by staff</option>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="bankAccountId">Bank account used</Label>
+            <Select id="bankAccountId" name="bankAccountId" required>
+              <option value="">Select bank account</option>
+              {bankAccounts.map((account) => (
+                <option key={account.id} value={account.id}>
+                  {account.bankName} - {account.accountNumber}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="paymentProof">Payment proof</Label>
+            <Input id="paymentProof" name="paymentProof" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" required />
+            <p className="text-xs text-muted-foreground">Required. Upload a clear JPG, PNG, WEBP, or PDF up to 5 MB.</p>
+          </div>
+          <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
+            Every booking requires advance payment proof. If a client misses a confirmed appointment, mark it as a no-show after the appointment time. The booking will expire and its advance cannot be refunded or moved to another booking.
           </div>
           <Button type="submit">Create staff booking</Button>
         </form>

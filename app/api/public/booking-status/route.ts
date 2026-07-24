@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { formatStatus } from "@/lib/format";
-import { appTimezone } from "@/lib/timezone";
+import { formatStatus, shortDateTime } from "@/lib/format";
 
 function normalizePhone(value: string) {
   const digits = value.replace(/\D/g, "");
@@ -9,25 +8,15 @@ function normalizePhone(value: string) {
   return digits;
 }
 
-function formatAppointment(value: Date) {
-  return new Intl.DateTimeFormat("en-US", {
-    timeZone: appTimezone,
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(value);
-}
-
-function statusMessage(status: string, paymentStatus?: string) {
+function statusMessage(status: string, paymentStatus?: string, forfeitedAdvanceAmount = 0) {
   if (status === "CONFIRMED") return "Your appointment is confirmed. Please arrive on time for your service.";
   if (status === "COMPLETED") return "This appointment has been completed. Thank you for visiting Viola Brows and Beauty.";
   if (status === "CANCELLED") return "This appointment was cancelled. Please contact Viola if you need help booking another time.";
   if (status === "REJECTED" || paymentStatus === "PAYMENT_REJECTED") return "The payment proof was not accepted. Please contact Viola for help before making another payment.";
-  if (status === "NO_SHOW") return "This appointment was marked as missed. Please contact Viola if you need assistance.";
-  if (status === "EXPIRED") return "This booking request expired before it was confirmed. Please submit a new booking request.";
+  if (status === "NO_SHOW" || (status === "EXPIRED" && forfeitedAdvanceAmount > 0)) {
+    return `This appointment expired because it was marked as a no-show. Your ${forfeitedAdvanceAmount.toLocaleString("en-US")} ETB advance is non-refundable and cannot be moved to another booking. To book again, make a new booking and pay a new advance.`;
+  }
+  if (status === "EXPIRED") return "This booking request expired before it was confirmed. Please make a new booking request.";
   if (status === "PAYMENT_UPLOADED" || paymentStatus === "PROOF_UPLOADED") return "Your payment proof was received and is waiting for staff review.";
   return "Your booking request is saved and waiting for payment review.";
 }
@@ -40,6 +29,10 @@ export async function POST(request: Request) {
   if (phone.length < 7) {
     return Response.json({ error: "Enter the phone number used during booking." }, { status: 400 });
   }
+  const hasFullPrecautions = Boolean(await prisma.precautionDocument.findFirst({
+    where: { isActive: true },
+    select: { id: true },
+  }));
 
   if (!bookingCode) {
     const possibleClients = await prisma.client.findMany({
@@ -62,15 +55,16 @@ export async function POST(request: Request) {
             status: true,
             startDateTime: true,
             updatedAt: true,
+            precautionNoticeSnapshot: true,
             service: { select: { name: true } },
-            payment: { select: { paymentStatus: true } },
+            payment: { select: { paymentStatus: true, advanceForfeitedAmount: true } },
           },
           orderBy: { startDateTime: "asc" },
           take: 30,
         });
 
     return Response.json(
-      { bookings: bookings.map((booking) => publicBookingStatus(booking)) },
+      { bookings: bookings.map((booking) => publicBookingStatus(booking, hasFullPrecautions)) },
       { headers: { "Cache-Control": "no-store" } },
     );
   }
@@ -82,9 +76,10 @@ export async function POST(request: Request) {
       status: true,
       startDateTime: true,
       updatedAt: true,
+      precautionNoticeSnapshot: true,
       client: { select: { phone: true } },
       service: { select: { name: true } },
-      payment: { select: { paymentStatus: true } },
+      payment: { select: { paymentStatus: true, advanceForfeitedAmount: true } },
     },
   });
 
@@ -95,7 +90,7 @@ export async function POST(request: Request) {
     );
   }
 
-  return Response.json(publicBookingStatus(booking), { headers: { "Cache-Control": "no-store" } });
+  return Response.json(publicBookingStatus(booking, hasFullPrecautions), { headers: { "Cache-Control": "no-store" } });
 }
 
 function publicBookingStatus(booking: {
@@ -103,20 +98,47 @@ function publicBookingStatus(booking: {
   status: string;
   startDateTime: Date;
   updatedAt: Date;
+  precautionNoticeSnapshot: string | null;
   service: { name: string };
-  payment: { paymentStatus: string } | null;
-}) {
+  payment: { paymentStatus: string; advanceForfeitedAmount: { toString(): string } | null } | null;
+}, hasFullPrecautions: boolean) {
   const paymentStatus = booking.payment?.paymentStatus || "NOT_PAID";
+  const advanceForfeitedAmount = Number(booking.payment?.advanceForfeitedAmount || 0);
+  const advanceForfeited = advanceForfeitedAmount > 0;
   return {
     bookingCode: booking.bookingCode,
     bookingStatus: booking.status,
-    bookingStatusLabel: formatStatus(booking.status),
+    bookingStatusLabel: advanceForfeited ? "Expired - No-show" : formatStatus(booking.status),
     paymentStatus,
     paymentStatusLabel: formatStatus(paymentStatus),
     service: booking.service.name,
     appointmentTimestamp: booking.startDateTime.toISOString(),
-    appointment: formatAppointment(booking.startDateTime),
-    lastUpdated: formatAppointment(booking.updatedAt),
-    message: statusMessage(booking.status, booking.payment?.paymentStatus),
+    appointment: shortDateTime(booking.startDateTime),
+    lastUpdated: shortDateTime(booking.updatedAt),
+    precaution: parsePrecautionSnapshot(booking.precautionNoticeSnapshot),
+    hasFullPrecautions,
+    advanceForfeited,
+    advanceForfeitedAmount,
+    message: statusMessage(booking.status, booking.payment?.paymentStatus, advanceForfeitedAmount),
   };
+}
+
+function parsePrecautionSnapshot(value: string | null) {
+  if (!value) return null;
+  try {
+    const parsed = JSON.parse(value) as {
+      title?: string;
+      intro?: string | null;
+      instructions?: string | null;
+      contact?: string | null;
+    };
+    return {
+      title: parsed.title || "Service precautions",
+      intro: parsed.intro || "",
+      instructions: (parsed.instructions || "").split(/\r?\n/).map((item) => item.trim()).filter(Boolean),
+      contact: parsed.contact || "",
+    };
+  } catch {
+    return null;
+  }
 }

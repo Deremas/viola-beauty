@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarPlus, Search, Sparkles } from "lucide-react";
+import { CalendarPlus, FileText, Search, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function PublicHeader() {
@@ -17,6 +17,13 @@ export function PublicHeader() {
         </Link>
 
         <nav className="flex items-center justify-end gap-2" aria-label="Client navigation">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/precautions" title="View full precautions">
+              <FileText className="h-4 w-4" />
+              <span className="hidden lg:inline">Precautions</span>
+              <span className="sr-only lg:hidden">View full precautions</span>
+            </Link>
+          </Button>
           <Button asChild variant="outline" size="sm">
             <Link href="/booking-status">
               <Search className="h-4 w-4" />

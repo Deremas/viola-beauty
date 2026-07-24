@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { Banknote, Bell, CalendarClock, Landmark, MessageSquareText, Send, ShieldCheck, Sparkles, Users } from "lucide-react";
+import { CalendarClock, FileText, Landmark, MessageSquareText, Send, ShieldCheck, Sparkles, Users } from "lucide-react";
 import type { PermissionKey } from "@prisma/client";
 import { hasPermission, requireUser } from "@/lib/permissions";
 import { Card, CardContent } from "@/components/ui/card";
 
 const settings = [
   { href: "/admin/settings/services", label: "Services", description: "Prices, advance amounts, service duration, and client visibility.", icon: Sparkles, permission: "MANAGE_SERVICES" },
+  { href: "/admin/settings/precautions", label: "Client precautions", description: "Upload the full PDF, view version history, and choose the current client document.", icon: FileText, permission: "MANAGE_SERVICES" },
   { href: "/admin/settings/bank-accounts", label: "Bank accounts", description: "Payment accounts and instructions shown during booking.", icon: Landmark, permission: "MANAGE_BANK_ACCOUNTS" },
   { href: "/admin/settings/availability", label: "Availability", description: "Working hours and breaks between available times.", icon: CalendarClock, permission: "MANAGE_AVAILABILITY" },
   { href: "/admin/settings/days-off", label: "Days off", description: "Full and partial days when appointments are unavailable.", icon: CalendarClock, permission: "MANAGE_AVAILABILITY" },

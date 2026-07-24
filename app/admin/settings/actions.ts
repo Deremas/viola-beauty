@@ -7,6 +7,13 @@ import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/permissions";
 import { serviceSchema } from "@/lib/validators/booking";
 import { permissionValues } from "@/lib/permission-catalog";
+import { prepareServiceImage } from "@/lib/service-image";
+import { getBookingSlotInterval } from "@/lib/booking-settings";
+
+function serviceDurationFromForm(formData: FormData) {
+  return Number(formData.get("durationHours") || 0) * 60
+    + Number(formData.get("durationRemainderMinutes") || 0);
+}
 
 export async function createService(formData: FormData) {
   await requirePermission("MANAGE_SERVICES");
@@ -16,11 +23,22 @@ export async function createService(formData: FormData) {
     description: formData.get("description"),
     price: formData.get("price"),
     advanceAmount: formData.get("advanceAmount"),
-    durationMinutes: formData.get("durationMinutes"),
+    durationMinutes: serviceDurationFromForm(formData),
     bufferMinutes: formData.get("bufferMinutes"),
+    bookingWarningTitle: formData.get("bookingWarningTitle"),
+    bookingWarningIntro: formData.get("bookingWarningIntro"),
+    bookingWarningInstructions: formData.get("bookingWarningInstructions"),
+    bookingWarningContact: formData.get("bookingWarningContact"),
+    bookingWarningActive: formData.get("bookingWarningActive") === "on",
     isActive: formData.get("isActive") === "on",
   });
-  await prisma.service.create({ data });
+  const image = await prepareServiceImage(formData.get("serviceImage"));
+  await prisma.service.create({
+    data: {
+      ...data,
+      image: image ? { create: image } : undefined,
+    },
+  });
   revalidatePath("/admin/settings/services");
 }
 
@@ -38,12 +56,58 @@ export async function updateService(formData: FormData) {
     description: formData.get("description"),
     price: formData.get("price"),
     advanceAmount: formData.get("advanceAmount"),
-    durationMinutes: formData.get("durationMinutes"),
+    durationMinutes: serviceDurationFromForm(formData),
     bufferMinutes: formData.get("bufferMinutes"),
+    bookingWarningTitle: formData.get("bookingWarningTitle"),
+    bookingWarningIntro: formData.get("bookingWarningIntro"),
+    bookingWarningInstructions: formData.get("bookingWarningInstructions"),
+    bookingWarningContact: formData.get("bookingWarningContact"),
+    bookingWarningActive: formData.get("bookingWarningActive") === "on",
     isActive: formData.get("isActive") === "on",
   });
-  await prisma.service.update({ where: { id }, data });
+  const image = await prepareServiceImage(formData.get("serviceImage"));
+  await prisma.service.update({
+    where: { id },
+    data: {
+      ...data,
+      image: image
+        ? {
+            upsert: {
+              create: image,
+              update: image,
+            },
+          }
+        : undefined,
+    },
+  });
   revalidatePath("/admin/settings/services");
+  revalidatePath("/book");
+}
+
+export async function removeServiceImage(formData: FormData) {
+  await requirePermission("MANAGE_SERVICES");
+  const serviceId = String(formData.get("id"));
+  await prisma.serviceImage.deleteMany({ where: { serviceId } });
+  revalidatePath(`/admin/settings/services/${serviceId}/edit`);
+  revalidatePath(`/admin/settings/services/${serviceId}`);
+  revalidatePath("/admin/settings/services");
+  revalidatePath("/");
+  revalidatePath("/book");
+}
+
+export async function saveBookingSlotInterval(formData: FormData) {
+  await requirePermission("MANAGE_AVAILABILITY");
+  const requested = Number(formData.get("slotIntervalMinutes"));
+  if (requested !== 30 && requested !== 60) {
+    throw new Error("Choose hourly or half-hour appointment starts");
+  }
+  await prisma.bookingSetting.upsert({
+    where: { id: "primary" },
+    update: { slotIntervalMinutes: requested },
+    create: { id: "primary", slotIntervalMinutes: requested },
+  });
+  revalidatePath("/admin/settings/availability");
+  revalidatePath("/admin/calendar");
   revalidatePath("/book");
 }
 
@@ -180,15 +244,27 @@ function validateWorkingHours(openingTime: string, closingTime: string) {
   if (openingTime >= closingTime) throw new Error("Closing time must be after opening time");
 }
 
+function validateTimeAlignment(time: string, interval: number) {
+  const minutes = Number(time.split(":")[1]);
+  if (!Number.isInteger(minutes) || minutes % interval !== 0) {
+    throw new Error(interval === 60 ? "Choose a whole-hour time" : "Choose a whole-hour or half-hour time");
+  }
+}
+
 export async function saveWeeklyWorkingHours(formData: FormData) {
   await requirePermission("MANAGE_AVAILABILITY");
+  const interval = await getBookingSlotInterval();
   const rows = Array.from({ length: 7 }, (_, dayOfWeek) => ({
     dayOfWeek,
     openingTime: String(formData.get(`openingTime_${dayOfWeek}`) || "09:00"),
     closingTime: String(formData.get(`closingTime_${dayOfWeek}`) || "18:00"),
     isOpen: formData.get(`isOpen_${dayOfWeek}`) === "on",
   }));
-  rows.filter((row) => row.isOpen).forEach((row) => validateWorkingHours(row.openingTime, row.closingTime));
+  rows.filter((row) => row.isOpen).forEach((row) => {
+    validateWorkingHours(row.openingTime, row.closingTime);
+    validateTimeAlignment(row.openingTime, interval);
+    validateTimeAlignment(row.closingTime, interval);
+  });
   await prisma.$transaction(rows.map((row) => prisma.workingHour.upsert({
     where: { dayOfWeek: row.dayOfWeek },
     update: row,
@@ -200,12 +276,17 @@ export async function saveWeeklyWorkingHours(formData: FormData) {
 
 export async function applyWorkingHoursToDays(formData: FormData) {
   await requirePermission("MANAGE_AVAILABILITY");
+  const interval = await getBookingSlotInterval();
   const days = formData.getAll("days").map(Number).filter((day) => Number.isInteger(day) && day >= 0 && day <= 6);
   const openingTime = String(formData.get("openingTime"));
   const closingTime = String(formData.get("closingTime"));
   const isOpen = formData.get("isOpen") === "on";
   if (days.length === 0) throw new Error("Choose at least one day");
-  if (isOpen) validateWorkingHours(openingTime, closingTime);
+  if (isOpen) {
+    validateWorkingHours(openingTime, closingTime);
+    validateTimeAlignment(openingTime, interval);
+    validateTimeAlignment(closingTime, interval);
+  }
   await prisma.$transaction(days.map((dayOfWeek) => prisma.workingHour.upsert({
     where: { dayOfWeek },
     update: { openingTime, closingTime, isOpen },
@@ -217,6 +298,9 @@ export async function applyWorkingHoursToDays(formData: FormData) {
 
 export async function createBreakTime(formData: FormData) {
   await requirePermission("MANAGE_AVAILABILITY");
+  const interval = await getBookingSlotInterval();
+  validateTimeAlignment(String(formData.get("startTime")), interval);
+  validateTimeAlignment(String(formData.get("endTime")), interval);
   await prisma.breakTime.create({
     data: {
       dayOfWeek: Number(formData.get("dayOfWeek")),
@@ -230,6 +314,9 @@ export async function createBreakTime(formData: FormData) {
 
 export async function updateBreakTime(formData: FormData) {
   await requirePermission("MANAGE_AVAILABILITY");
+  const interval = await getBookingSlotInterval();
+  validateTimeAlignment(String(formData.get("startTime")), interval);
+  validateTimeAlignment(String(formData.get("endTime")), interval);
   const id = String(formData.get("id"));
   await prisma.breakTime.update({
     where: { id },
@@ -252,10 +339,15 @@ export async function deleteBreakTime(formData: FormData) {
 
 export async function createDayOff(formData: FormData) {
   await requirePermission("MANAGE_AVAILABILITY");
+  const interval = await getBookingSlotInterval();
   const isFullDay = formData.get("isFullDay") === "on";
   const startTime = String(formData.get("startTime") || "") || null;
   const endTime = String(formData.get("endTime") || "") || null;
   if (!isFullDay && (!startTime || !endTime || startTime >= endTime)) throw new Error("Choose a valid start and end time for a partial day off");
+  if (!isFullDay) {
+    validateTimeAlignment(startTime!, interval);
+    validateTimeAlignment(endTime!, interval);
+  }
   await prisma.dayOff.create({
     data: {
       title: String(formData.get("title")),
@@ -271,11 +363,16 @@ export async function createDayOff(formData: FormData) {
 
 export async function updateDayOff(formData: FormData) {
   await requirePermission("MANAGE_AVAILABILITY");
+  const interval = await getBookingSlotInterval();
   const id = String(formData.get("id"));
   const isFullDay = formData.get("isFullDay") === "on";
   const startTime = String(formData.get("startTime") || "") || null;
   const endTime = String(formData.get("endTime") || "") || null;
   if (!isFullDay && (!startTime || !endTime || startTime >= endTime)) throw new Error("Choose a valid start and end time for a partial day off");
+  if (!isFullDay) {
+    validateTimeAlignment(startTime!, interval);
+    validateTimeAlignment(endTime!, interval);
+  }
   await prisma.dayOff.update({ where: { id }, data: {
     title: String(formData.get("title")).trim(),
     date: new Date(String(formData.get("date"))),

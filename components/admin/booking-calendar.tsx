@@ -23,11 +23,12 @@ function renderEventContent(info: EventContentArg) {
   );
 }
 
-export default function BookingCalendar() {
+export default function BookingCalendar({ showHalfHourGrid }: { showHalfHourGrid: boolean }) {
   return (
     <FullCalendar
       plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
       initialView="timeGridWeek"
+      timeZone="UTC"
       headerToolbar={{
         left: "prev,next today",
         center: "title",
@@ -40,6 +41,9 @@ export default function BookingCalendar() {
       height="auto"
       slotMinTime="08:00:00"
       slotMaxTime="20:00:00"
+      slotDuration={showHalfHourGrid ? "00:30:00" : "01:00:00"}
+      slotLabelInterval="01:00:00"
+      slotLabelFormat={{ hour: "numeric", minute: "2-digit", meridiem: "short" }}
       eventContent={renderEventContent}
       eventDidMount={(info) => {
         const props = info.event.extendedProps;

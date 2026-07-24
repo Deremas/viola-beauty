@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/permissions";
 import { formatStatus } from "@/lib/format";
-import { appTimezone } from "@/lib/timezone";
+import { appTimezone, calendarLocalIso, calendarRangeToUtc } from "@/lib/timezone";
 
 function getColor(status: string) {
   if (status === "CONFIRMED") return "#16a34a";
@@ -19,8 +19,8 @@ export async function GET(request: Request) {
 
   const bookings = await prisma.booking.findMany({
     where: {
-      startDateTime: start ? { gte: new Date(start) } : undefined,
-      endDateTime: end ? { lte: new Date(end) } : undefined,
+      startDateTime: start ? { gte: calendarRangeToUtc(start) } : undefined,
+      endDateTime: end ? { lte: calendarRangeToUtc(end) } : undefined,
       status: { notIn: ["REJECTED", "EXPIRED"] },
     },
     include: { client: true, service: true, payment: { select: { paymentStatus: true } }, bookedBy: true },
@@ -30,8 +30,8 @@ export async function GET(request: Request) {
     bookings.map((booking) => ({
       id: booking.id,
       title: `${formatCalendarTime(booking.startDateTime)} - ${booking.client.fullName} - ${booking.service.name}`,
-      start: booking.startDateTime,
-      end: booking.endDateTime,
+      start: calendarLocalIso(booking.startDateTime),
+      end: calendarLocalIso(booking.endDateTime),
       backgroundColor: getColor(booking.status),
       borderColor: getColor(booking.status),
       textColor: "#ffffff",

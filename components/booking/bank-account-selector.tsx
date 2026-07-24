@@ -70,7 +70,7 @@ export function BankAccountSelector({ accounts }: { accounts: BankAccountOption[
         )}
 
         <div className="space-y-2">
-          <label htmlFor="paymentProof" className="text-sm font-semibold">Upload payment screenshot</label>
+          <label htmlFor="paymentProof" className="text-sm font-semibold">Payment proof (required)</label>
           <Input id="paymentProof" name="paymentProof" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" required />
           <p className="text-xs text-muted-foreground">Required. JPG, PNG, WEBP, or PDF up to 5 MB.</p>
         </div>

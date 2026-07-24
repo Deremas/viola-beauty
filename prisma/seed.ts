@@ -1,6 +1,7 @@
 import { addDays, addHours, setHours, setMinutes } from "date-fns";
 import { PrismaClient, type BookingSource, type BookingStatus, type PaymentStatus, type UserRole } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { servicePrecautionDefaults } from "../lib/service-precaution-defaults";
 
 const prisma = new PrismaClient();
 
@@ -132,6 +133,12 @@ async function upsertSampleBooking(input: {
 }
 
 async function main() {
+  await prisma.bookingSetting.upsert({
+    where: { id: "primary" },
+    update: {},
+    create: { id: "primary", slotIntervalMinutes: 60 },
+  });
+
   const admin = await upsertUser({
     name: "Viola Admin",
     username: "admin",
@@ -158,6 +165,7 @@ async function main() {
   ] as const;
 
   for (const [id, name, category, description, price, advanceAmount, durationMinutes, bufferMinutes] of services) {
+    const warning = servicePrecautionDefaults[name.toLowerCase()];
     await prisma.service.upsert({
       where: { id },
       update: {
@@ -168,6 +176,11 @@ async function main() {
         advanceAmount,
         durationMinutes,
         bufferMinutes,
+        bookingWarningTitle: warning?.title,
+        bookingWarningIntro: warning?.intro,
+        bookingWarningInstructions: warning?.instructions,
+        bookingWarningContact: warning?.contact,
+        bookingWarningActive: Boolean(warning),
         isActive: true,
       },
       create: {
@@ -179,6 +192,11 @@ async function main() {
         advanceAmount,
         durationMinutes,
         bufferMinutes,
+        bookingWarningTitle: warning?.title,
+        bookingWarningIntro: warning?.intro,
+        bookingWarningInstructions: warning?.instructions,
+        bookingWarningContact: warning?.contact,
+        bookingWarningActive: Boolean(warning),
         isActive: true,
       },
     });
