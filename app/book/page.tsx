@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PublicHeader } from "@/components/public/public-header";
+import { BookingSubmissionGuard } from "@/components/booking/booking-submission-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +32,12 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function BookPage() {
+export default async function BookPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string; retryAfter?: string }>;
+}) {
+  const query = await searchParams;
   const [services, bankAccounts] = await Promise.all([
     prisma.service.findMany({
       where: { isActive: true, deletedAt: null },
@@ -51,6 +57,13 @@ export default async function BookPage() {
         <p className="mt-3 max-w-2xl text-muted-foreground">Your booking is reviewed after you upload a clear transfer screenshot.</p>
       </div>
 
+      {query.error ? (
+        <div className="mb-6 rounded-xl border border-destructive/30 bg-destructive/5 p-5 text-destructive" role="alert">
+          <h2 className="font-display text-lg font-bold">We could not submit this booking</h2>
+          <p className="mt-1 text-sm leading-6">{bookingErrorMessage(query.error, query.retryAfter)}</p>
+        </div>
+      ) : null}
+
       <div className="mb-6 rounded-xl border border-amber-300 bg-amber-50 p-5 text-amber-950">
         <h2 className="font-display text-lg font-bold">Advance payment policy</h2>
         <ul className="mt-2 grid gap-1 text-sm leading-6 sm:grid-cols-3 sm:gap-4">
@@ -60,7 +73,8 @@ export default async function BookPage() {
         </ul>
       </div>
 
-      <form action={createPublicBooking} className="grid gap-6 lg:grid-cols-[1fr_0.85fr]">
+      <form id="public-booking-form" action={createPublicBooking} className="grid gap-6 lg:grid-cols-[1fr_0.85fr]">
+        <BookingSubmissionGuard formId="public-booking-form" />
         <section className="space-y-6">
           <BookingSlotPicker
             services={services.map((service) => ({
@@ -126,4 +140,27 @@ export default async function BookPage() {
       </main>
     </>
   );
+}
+
+function bookingErrorMessage(code: string, retryAfter?: string) {
+  const messages: Record<string, string> = {
+    SLOT_TAKEN: "That time was just booked by someone else. Please choose another available time.",
+    SUBMISSION_PROCESSING: "Your request is still being processed. Please wait a moment; this page will recover a saved booking automatically.",
+    SUBMISSION_FAILED: "The previous request did not finish. You can safely review the form and submit it again.",
+    TOKEN_REUSED: "The booking details changed after submission. Refresh this page and try again.",
+    INVALID_SUBMISSION_TOKEN: "This booking form expired. Refresh this page and try again.",
+    INVALID_PHONE: "Enter a valid Ethiopian mobile number.",
+    SERVICE_UNAVAILABLE: "That service is no longer available. Please select another service.",
+    BANK_UNAVAILABLE: "That payment account is no longer available. Please select another account.",
+    PRECAUTIONS_REQUIRED: "Please read and accept the selected service precautions.",
+    PAST_SLOT: "The selected appointment time has passed. Please choose a future time.",
+    PROOF_REQUIRED: "Upload a clear payment proof before sending the booking request.",
+    RATE_LIMITED: `Too many booking attempts were received. Please wait ${formatRetryTime(retryAfter)} and try again.`,
+  };
+  return messages[code] || "An unexpected problem occurred. Your booking may still have been saved, so check your booking status before submitting again.";
+}
+
+function formatRetryTime(retryAfter?: string) {
+  const seconds = Math.max(1, Number(retryAfter) || 60);
+  return seconds >= 60 ? `${Math.ceil(seconds / 60)} minute(s)` : `${seconds} seconds`;
 }

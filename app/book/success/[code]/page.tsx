@@ -6,6 +6,7 @@ import { CopyBookingCode } from "@/components/booking/copy-booking-code";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PublicHeader } from "@/components/public/public-header";
+import { ClearBookingSubmission } from "@/components/booking/booking-submission-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,7 @@ export default async function BookingSuccessPage({ params }: { params: Promise<{
   return (
     <>
       <PublicHeader />
+      <ClearBookingSubmission />
       <main className="flex min-h-[calc(100vh-65px)] items-center px-5 py-10 sm:px-6">
       <Card className="mx-auto w-full max-w-3xl overflow-hidden bg-white/90">
         <div className="bg-foreground px-6 py-8 text-white sm:px-8">

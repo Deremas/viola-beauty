@@ -89,6 +89,12 @@ enum TelegramNotificationEvent {
   BOOKING_NO_SHOW
 }
 
+enum BookingSubmissionStatus {
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
 model User {
   id           String    @id @default(uuid())
   name         String
@@ -295,6 +301,7 @@ model Booking {
   statusLogs       BookingStatusLog[]
   notificationLogs NotificationLog[]
   tasks            StaffTask[]
+  submission       BookingSubmission?
 
   @@index([startDateTime])
   @@index([endDateTime])
@@ -302,6 +309,58 @@ model Booking {
   @@index([source])
   @@index([bookedByUserId])
   @@index([precautionDocumentId])
+}
+
+model BookingSubmission {
+  id                 String                  @id @default(uuid())
+  tokenHash          String                  @unique
+  phoneHash          String
+  requestFingerprint String
+  status             BookingSubmissionStatus @default(PROCESSING)
+  bookingId          String?                 @unique
+  attemptCount       Int                     @default(1)
+  lastErrorCode      String?
+  lastAttemptedAt    DateTime                @default(now())
+  completedAt        DateTime?
+  expiresAt          DateTime
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+
+  booking Booking? @relation(fields: [bookingId], references: [id])
+
+  @@index([phoneHash])
+  @@index([status, expiresAt])
+}
+
+model SecuritySetting {
+  id                   String   @id @default("primary")
+  loginMax             Int      @default(5)
+  loginWindowSeconds   Int      @default(900)
+  bookingIpMax         Int      @default(5)
+  bookingPhoneMax      Int      @default(3)
+  bookingWindowSeconds Int      @default(900)
+  statusMax            Int      @default(10)
+  statusWindowSeconds  Int      @default(600)
+  slotsMax             Int      @default(120)
+  slotsWindowSeconds   Int      @default(300)
+  uploadMax            Int      @default(5)
+  uploadWindowSeconds  Int      @default(900)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}
+
+model RateLimitBucket {
+  id          String   @id @default(uuid())
+  action      String
+  keyHash     String
+  windowStart DateTime
+  count       Int      @default(1)
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([action, keyHash, windowStart])
+  @@index([expiresAt])
 }
 
 model PrecautionDocument {

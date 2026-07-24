@@ -43,7 +43,7 @@ export async function requireUser() {
 
 export async function requireAdmin() {
   const user = await requireUser();
-  if (user.role !== "ADMIN") throw new Error("Forbidden");
+  if (user.role !== "ADMIN") redirect("/forbidden");
   return user;
 }
 
@@ -53,7 +53,7 @@ export function hasPermission(user: SessionUser, permission: PermissionKey) {
 
 export async function requirePermission(permission: PermissionKey) {
   const user = await requireUser();
-  if (!hasPermission(user, permission)) throw new Error("Forbidden");
+  if (!hasPermission(user, permission)) redirect("/forbidden");
   return user;
 }
 

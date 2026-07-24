@@ -42,6 +42,7 @@ export function BookingSlotPicker({ services, requirePrecautionAcknowledgement =
   const [selectedTime, setSelectedTime] = useState("");
   const [slots, setSlots] = useState<Slot[]>([]);
   const [notice, setNotice] = useState<AvailabilityNotice | null>(null);
+  const [loadError, setLoadError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [warningService, setWarningService] = useState<ServiceOption | null>(null);
   const [acknowledgedServiceId, setAcknowledgedServiceId] = useState("");
@@ -66,6 +67,7 @@ export function BookingSlotPicker({ services, requirePrecautionAcknowledgement =
     setSelectedTime("");
     setSlots([]);
     setNotice(null);
+    setLoadError("");
 
     if (!serviceId || !date) return;
 
@@ -75,13 +77,20 @@ export function BookingSlotPicker({ services, requirePrecautionAcknowledgement =
     fetch(`/api/public/slots?serviceId=${encodeURIComponent(serviceId)}&date=${encodeURIComponent(date)}`, {
       signal: controller.signal,
     })
-      .then((response) => response.json())
+      .then(async (response) => {
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Available times could not be loaded.");
+        return data;
+      })
       .then((data: { slots?: Slot[]; notice?: AvailabilityNotice | null }) => {
         setSlots(data.slots ?? []);
         setNotice(data.notice ?? null);
       })
       .catch((error) => {
-        if (error.name !== "AbortError") setSlots([]);
+        if (error.name !== "AbortError") {
+          setSlots([]);
+          setLoadError(error.message || "Available times could not be loaded. Please try again.");
+        }
       })
       .finally(() => setIsLoading(false));
 
@@ -153,7 +162,9 @@ export function BookingSlotPicker({ services, requirePrecautionAcknowledgement =
               </div>
             ) : null}
 
-            {!serviceId || !date ? (
+            {loadError ? (
+              <p className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive" role="alert">{loadError}</p>
+            ) : !serviceId || !date ? (
               <p className="rounded-md border bg-muted/60 p-3 text-sm text-muted-foreground">Choose a service and date to see available slots.</p>
             ) : slots.length === 0 && !isLoading ? (
               notice?.type === "closed" ? null : <p className="rounded-md border bg-muted/60 p-3 text-sm text-muted-foreground">No available slots for this date.</p>

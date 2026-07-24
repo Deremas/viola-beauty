@@ -138,6 +138,11 @@ async function main() {
     update: {},
     create: { id: "primary", slotIntervalMinutes: 60 },
   });
+  await prisma.securitySetting.upsert({
+    where: { id: "primary" },
+    update: {},
+    create: { id: "primary" },
+  });
 
   const admin = await upsertUser({
     name: "Viola Admin",

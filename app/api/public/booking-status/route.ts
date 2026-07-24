@@ -1,5 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { formatStatus, shortDateTime } from "@/lib/format";
+import { apiError } from "@/lib/api-error";
+import { consumeRateLimit, securitySettings } from "@/lib/rate-limit";
+import { getRequestIp } from "@/lib/security";
 
 function normalizePhone(value: string) {
   const digits = value.replace(/\D/g, "");
@@ -25,6 +28,15 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const bookingCode = String(body?.bookingCode || "").trim().toUpperCase();
   const phone = normalizePhone(String(body?.phone || ""));
+  try {
+    const settings = await securitySettings();
+    await Promise.all([
+      consumeRateLimit({ action: "booking-status-ip", identifier: getRequestIp(request.headers), limit: settings.statusMax, windowSeconds: settings.statusWindowSeconds }),
+      consumeRateLimit({ action: "booking-status-phone", identifier: phone || "empty", limit: settings.statusMax, windowSeconds: settings.statusWindowSeconds }),
+    ]);
+  } catch (error) {
+    return apiError(error, "Booking status is temporarily unavailable. Please try again.");
+  }
 
   if (phone.length < 7) {
     return Response.json({ error: "Enter the phone number used during booking." }, { status: 400 });

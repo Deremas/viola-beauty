@@ -4,7 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string; retryAfter?: string }>;
+}) {
+  const query = await searchParams;
   return (
     <main className="mx-auto flex min-h-screen max-w-md items-center px-6 py-12">
       <Card className="w-full">
@@ -12,6 +17,13 @@ export default function LoginPage() {
           <CardTitle>Staff login</CardTitle>
         </CardHeader>
         <CardContent>
+          {query.error ? (
+            <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive" role="alert">
+              {query.error === "rate"
+                ? `Too many sign-in attempts. Please wait ${Math.max(1, Math.ceil((Number(query.retryAfter) || 60) / 60))} minute(s) and try again.`
+                : "The username or password is incorrect."}
+            </div>
+          ) : null}
           <form action={login} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="username">Username</Label>
