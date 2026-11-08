@@ -43,3 +43,23 @@ export async function savePaymentProof(file: File, bookingCode: string) {
 
   return relativePath;
 }
+
+export async function saveManagedUpload(file: File, folder: string, namePrefix: string) {
+  if (!file || file.size === 0) return null;
+  if (!allowedTypes.includes(file.type)) throw new Error("Upload a JPG, PNG, WEBP, or PDF under 5 MB.");
+  if (file.size > maxBytes) throw new Error("File is larger than 5 MB.");
+  const safeFolder = folder.replace(/[^a-z0-9/-]/gi, "");
+
+  if (shouldStoreProofInDatabase()) {
+    const bytes = Buffer.from(await file.arrayBuffer());
+    const safeName = file.name || `upload.${extensionsByType[file.type]}`;
+    return `${databaseProofPrefix}${encodeMetadata(safeName)}:${encodeMetadata(file.type)}:${file.size}:${bytes.toString("base64")}`;
+  }
+
+  const extension = extensionsByType[file.type];
+  const relativePath = `${safeFolder}/${namePrefix}-${randomUUID()}.${extension}`;
+  const fullPath = path.join(getUploadRoot(), relativePath);
+  await mkdir(path.dirname(fullPath), { recursive: true });
+  await writeFile(fullPath, Buffer.from(await file.arrayBuffer()));
+  return relativePath;
+}

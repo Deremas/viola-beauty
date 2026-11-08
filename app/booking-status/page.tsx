@@ -1,15 +1,16 @@
-import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 import Link from "next/link";
 import { ArrowLeft, SearchCheck } from "lucide-react";
 import { BookingStatusChecker } from "@/components/booking/booking-status-checker";
 import { Button } from "@/components/ui/button";
-import { PublicHeader } from "@/components/public/public-header";
+import { PublicShell } from "@/components/public/public-shell";
 
-export const metadata: Metadata = {
+export const metadata = pageMetadata({
   title: "Check Booking Status",
-  description: "Check the current status of your Viola Brows and Beauty booking request.",
-  robots: { index: false, follow: false },
-};
+  description: "Check the current status of a Viola Brows and Beauty booking request with the booking code.",
+  path: "/booking-status",
+  index: false,
+});
 
 export default async function BookingStatusPage({
   searchParams,
@@ -19,8 +20,7 @@ export default async function BookingStatusPage({
   const { code = "" } = await searchParams;
 
   return (
-    <>
-      <PublicHeader />
+    <PublicShell>
       <main className="min-h-[calc(100vh-65px)] px-5 py-8 sm:px-6 sm:py-12">
       <div className="mx-auto max-w-5xl">
         <Button asChild variant="outline">
@@ -38,6 +38,6 @@ export default async function BookingStatusPage({
         <BookingStatusChecker initialCode={code} />
       </div>
       </main>
-    </>
+    </PublicShell>
   );
 }

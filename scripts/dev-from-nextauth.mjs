@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { existsSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -22,16 +22,6 @@ function readDotEnvValue(name) {
 
 const nextAuthUrl = process.env.NEXTAUTH_URL || readDotEnvValue("NEXTAUTH_URL");
 const args = ["dev"];
-const nextOutputPath = join(root, ".next");
-
-if (
-  existsSync(join(nextOutputPath, "BUILD_ID")) ||
-  existsSync(join(nextOutputPath, "required-server-files.json"))
-) {
-  console.log("Removing production .next output before starting next dev...");
-  rmSync(nextOutputPath, { recursive: true, force: true });
-}
-
 if (nextAuthUrl) {
   const url = new URL(nextAuthUrl);
   const hostname = url.hostname === "localhost" ? "127.0.0.1" : url.hostname;

@@ -4,6 +4,7 @@ import { requirePermission } from "@/lib/permissions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { saveSmsSettings, testSmsSettings } from "./actions";
 
@@ -27,7 +28,7 @@ export default async function SmsSettingsPage() {
           <CardContent>
             <form action={saveSmsSettings} className="grid gap-4">
               <Field label="API token">
-                <Input name="apiToken" type="password" autoComplete="off" required={!setting} placeholder={setting ? "Token saved - leave blank to keep it" : "Paste AfroMessage API token"} />
+                <PasswordInput name="apiToken" autoComplete="off" required={!setting} placeholder={setting ? "Token saved - leave blank to keep it" : "Paste AfroMessage API token"} />
               </Field>
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Identifier ID">

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Banknote, BarChart3, CalendarDays, ClipboardCheck, ClipboardList, LayoutDashboard, LogOut, MessageSquareText, Send, Settings, Sparkles, Users } from "lucide-react";
+import { Banknote, BarChart3, BookOpen, CalendarDays, ClipboardCheck, ClipboardList, History, Images, LayoutDashboard, LogOut, MessageSquareText, Scissors, Send, Settings, Sparkles, UserPlus, Users } from "lucide-react";
 import { logout } from "@/app/admin/actions";
 import { AdminMobileMenu } from "@/components/admin/admin-mobile-menu";
 import { Button } from "@/components/ui/button";
@@ -10,10 +10,17 @@ const nav = [
   { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard, permission: "VIEW_DASHBOARD" },
   { href: "/admin/calendar", label: "Calendar", icon: CalendarDays, permission: "VIEW_CALENDAR" },
   { href: "/admin/bookings", label: "Bookings", icon: ClipboardList, permission: "VIEW_BOOKINGS" },
+  { href: "/admin/settings/services", label: "Services", icon: Scissors, permission: "MANAGE_SERVICES" },
   { href: "/admin/tasks", label: "Tasks", icon: ClipboardCheck, permission: "MANAGE_TASKS" },
   { href: "/admin/clients", label: "Customers", icon: Users, permission: "VIEW_CLIENTS" },
   { href: "/admin/payments", label: "Payments", icon: Banknote, permission: "VIEW_PAYMENTS" },
   { href: "/admin/reports", label: "Reports", icon: BarChart3, permission: "VIEW_REPORTS" },
+  { href: "/admin/courses", label: "Courses", icon: BookOpen, permission: "VIEW_COURSES" },
+  { href: "/admin/courses/reports", label: "Course reports", icon: BarChart3, permission: "VIEW_REGISTRATIONS" },
+  { href: "/admin/audit", label: "Audit log", icon: History, permission: "VIEW_AUDIT_LOGS" },
+  { href: "/admin/registrations", label: "Registrations", icon: UserPlus, permission: "VIEW_REGISTRATIONS" },
+  { href: "/admin/students", label: "Students", icon: Users, permission: "VIEW_STUDENTS" },
+  { href: "/admin/website", label: "Website", icon: Images, permission: "MANAGE_WEBSITE" },
   { href: "/admin/settings", label: "Settings", icon: Settings, permission: "MANAGE_SERVICES" },
   { href: "/admin/settings/telegram", label: "Telegram alerts", icon: Send, permission: "MANAGE_NOTIFICATIONS" },
   { href: "/admin/settings/sms", label: "SMS alerts", icon: MessageSquareText, permission: "MANAGE_NOTIFICATIONS" },

@@ -36,8 +36,9 @@ type Slot = {
 
 type AvailabilityNotice = { type: "closed" | "limited"; title: string; message: string };
 
-export function BookingSlotPicker({ services, requirePrecautionAcknowledgement = false }: { services: ServiceOption[]; requirePrecautionAcknowledgement?: boolean }) {
-  const [serviceId, setServiceId] = useState(requirePrecautionAcknowledgement ? "" : services[0]?.id ?? "");
+export function BookingSlotPicker({ services, requirePrecautionAcknowledgement = false, initialServiceId }: { services: ServiceOption[]; requirePrecautionAcknowledgement?: boolean; initialServiceId?: string }) {
+  const initial = services.find((service) => service.id === initialServiceId);
+  const [serviceId, setServiceId] = useState(initial?.id || (requirePrecautionAcknowledgement ? "" : services[0]?.id ?? ""));
   const [date, setDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
   const [slots, setSlots] = useState<Slot[]>([]);
@@ -47,6 +48,12 @@ export function BookingSlotPicker({ services, requirePrecautionAcknowledgement =
   const [warningService, setWarningService] = useState<ServiceOption | null>(null);
   const [acknowledgedServiceId, setAcknowledgedServiceId] = useState("");
   const selectedService = services.find((service) => service.id === serviceId);
+
+  useEffect(() => {
+    if (initial && requirePrecautionAcknowledgement && initial.bookingWarningActive) setWarningService(initial);
+    // The booking link should open precautions once, without changing the acknowledgement rules.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!warningService) return;
@@ -109,7 +116,7 @@ export function BookingSlotPicker({ services, requirePrecautionAcknowledgement =
             <option value="">Select service</option>
             {services.map((service) => (
               <option key={service.id} value={service.id}>
-                {service.name} - {money(service.advanceAmount)} advance
+                {service.advanceAmount > 0 ? `${service.name} - ${money(service.advanceAmount)} advance` : service.name}
               </option>
             ))}
           </Select>
@@ -120,8 +127,8 @@ export function BookingSlotPicker({ services, requirePrecautionAcknowledgement =
               <div className="font-semibold">{selectedService.name}</div>
               {selectedService.description ? <p className="text-muted-foreground">{selectedService.description}</p> : null}
               <div className="grid gap-1 sm:grid-cols-3">
-                <span>Price: <strong>{money(selectedService.price)}</strong></span>
-                <span>Advance: <strong>{money(selectedService.advanceAmount)}</strong></span>
+                <span>Price: <strong>{selectedService.price > 0 ? money(selectedService.price) : "Set at the studio"}</strong></span>
+                <span>Advance: <strong>{selectedService.advanceAmount > 0 ? money(selectedService.advanceAmount) : "Set at the studio"}</strong></span>
                 <span>Duration: <strong>{formatDuration(selectedService.durationMinutes)}</strong></span>
               </div>
               {requirePrecautionAcknowledgement && selectedService.bookingWarningActive ? (

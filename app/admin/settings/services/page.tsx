@@ -1,19 +1,21 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Archive, Eye, Pencil, Plus, Power, PowerOff, RotateCcw } from "lucide-react";
+import { Eye, Pencil, Plus, Power, PowerOff, RotateCcw } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/permissions";
 import { formatDuration, money } from "@/lib/format";
 import { StatusBadge } from "@/lib/status";
-import { deleteService, restoreService, setServiceActive } from "../actions";
+import { deleteService, purgeService, restoreService, setServiceActive } from "../actions";
+import { ConfirmDeleteButton } from "@/components/admin/confirm-delete-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, Td, Th } from "@/components/ui/table";
 
-export default async function ServicesSettingsPage() {
+export default async function ServicesSettingsPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   await requirePermission("MANAGE_SERVICES");
+  const query = await searchParams;
   const allServices = await prisma.service.findMany({
-    include: { image: { select: { id: true } } },
+    include: { image: { select: { id: true } }, _count: { select: { bookings: true } } },
     orderBy: { name: "asc" },
   });
   const services = allServices.filter((service) => !service.deletedAt);
@@ -33,6 +35,7 @@ export default async function ServicesSettingsPage() {
           </Link>
         </Button>
       </div>
+      {query.error ? <p className="rounded-lg border border-destructive/30 bg-white p-3 text-sm text-destructive" role="alert">{query.error}</p> : null}
 
       <Card>
         <CardHeader>
@@ -74,16 +77,18 @@ export default async function ServicesSettingsPage() {
                   <Td><StatusBadge status={service.bookingWarningActive ? "ACTIVE" : "INACTIVE"} /></Td>
                   <Td>
                     <div className="flex items-center gap-2">
-                      <Button asChild variant="outline" size="icon" title="View service">
+                      <Button asChild variant="outline" size="sm" title="View service">
                         <Link href={`/admin/settings/services/${service.id}`} aria-label={`View ${service.name}`}>
                           <Eye className="h-4 w-4" />
+                          View
                         </Link>
                       </Button>
-                      <Button asChild variant="outline" size="icon" title="Edit service">
+                      <Button asChild variant="outline" size="sm" title="Edit service">
                         <Link href={`/admin/settings/services/${service.id}/edit`} aria-label={`Edit ${service.name}`}>
-                        <Pencil className="h-4 w-4" />
-                      </Link>
-                    </Button>
+                          <Pencil className="h-4 w-4" />
+                          Edit
+                        </Link>
+                      </Button>
                       <form action={setServiceActive}>
                         <input type="hidden" name="id" value={service.id} />
                         <input type="hidden" name="isActive" value={service.isActive ? "false" : "true"} />
@@ -97,18 +102,12 @@ export default async function ServicesSettingsPage() {
                           {service.isActive ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4" />}
                         </Button>
                       </form>
-                      <form action={deleteService}>
-                        <input type="hidden" name="id" value={service.id} />
-                        <Button
-                          variant="destructive"
-                          size="icon"
-                          type="submit"
-                          title="Archive service"
-                          aria-label={`Archive ${service.name}`}
-                        >
-                          <Archive className="h-4 w-4" />
-                        </Button>
-                      </form>
+                      <ConfirmDeleteButton
+                        action={deleteService}
+                        id={service.id}
+                        name={service.name}
+                        description="This takes the service off the website and the booking list. It moves to archived services, and past appointments stay on record."
+                      />
                     </div>
                   </Td>
                 </tr>
@@ -131,7 +130,16 @@ export default async function ServicesSettingsPage() {
             {archivedServices.map((service) => (
               <div key={service.id} className="flex items-center justify-between rounded-lg border p-3">
                 <div><p className="font-semibold">{service.name}</p><p className="text-xs text-muted-foreground">Historical bookings are preserved.</p></div>
-                <form action={restoreService}><input type="hidden" name="id" value={service.id} /><Button type="submit" variant="outline" size="icon" title="Restore service"><RotateCcw className="h-4 w-4" /><span className="sr-only">Restore service</span></Button></form>
+                <div className="flex items-center gap-2">
+                  <form action={restoreService}><input type="hidden" name="id" value={service.id} /><Button type="submit" variant="outline" size="sm"><RotateCcw className="h-4 w-4" />Restore</Button></form>
+                  <ConfirmDeleteButton
+                    action={purgeService}
+                    id={service.id}
+                    name={service.name}
+                    allow={service._count.bookings === 0}
+                    description={service._count.bookings > 0 ? `${service.name} still has ${service._count.bookings} appointment${service._count.bookings === 1 ? "" : "s"}. Those records stay, so this archived service cannot be removed.` : "This removes the archived service permanently. This cannot be restored."}
+                  />
+                </div>
               </div>
             ))}
           </CardContent>

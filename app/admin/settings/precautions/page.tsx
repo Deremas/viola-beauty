@@ -54,7 +54,7 @@ export default async function PrecautionsSettingsPage() {
             {current ? (
               <div className="rounded-xl border bg-muted/40 p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div><p className="font-bold">{current.title}</p><p className="mt-1 text-sm text-muted-foreground">{current.fileName} - {formatFileSize(current.fileSize)}</p></div>
+                  <div className="min-w-0"><p className="break-words font-bold">{current.title}</p><p className="mt-1 break-all text-sm text-muted-foreground">{current.fileName} - {formatFileSize(current.fileSize)}</p></div>
                   <StatusBadge status="ACTIVE" />
                 </div>
                 <div className="mt-5 flex flex-wrap justify-end gap-2">

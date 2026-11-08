@@ -132,11 +132,37 @@ export async function setServiceActive(formData: FormData) {
 
 export async function deleteService(formData: FormData) {
   await requirePermission("MANAGE_SERVICES");
+  if (formData.get("confirm") !== "yes") {
+    redirect("/admin/settings/services?error=" + encodeURIComponent("Confirm before deleting a service."));
+  }
   const id = String(formData.get("id"));
 
   await prisma.service.update({ where: { id, deletedAt: null }, data: { isActive: false, deletedAt: new Date() } });
 
   revalidatePath("/admin/settings/services");
+  revalidatePath("/services");
+  revalidatePath("/book");
+}
+
+export async function purgeService(formData: FormData) {
+  await requirePermission("MANAGE_SERVICES");
+  const id = String(formData.get("id"));
+  if (formData.get("confirm") !== "yes") {
+    redirect("/admin/settings/services?error=" + encodeURIComponent("Confirm before deleting a service."));
+  }
+  const service = await prisma.service.findFirst({
+    where: { id, deletedAt: { not: null } },
+    include: { _count: { select: { bookings: true } } },
+  });
+  if (!service) {
+    redirect("/admin/settings/services?error=" + encodeURIComponent("That service is not in the archive."));
+  }
+  if (service._count.bookings > 0) {
+    redirect("/admin/settings/services?error=" + encodeURIComponent(`${service.name} still has appointments, so it stays in the archive.`));
+  }
+  await prisma.service.delete({ where: { id } });
+  revalidatePath("/admin/settings/services");
+  revalidatePath("/services");
   revalidatePath("/book");
 }
 
@@ -271,7 +297,9 @@ export async function saveWeeklyWorkingHours(formData: FormData) {
     create: row,
   })));
   revalidatePath("/admin/settings/availability");
+  revalidatePath("/admin/website");
   revalidatePath("/book");
+  revalidatePath("/contact");
 }
 
 export async function applyWorkingHoursToDays(formData: FormData) {
@@ -293,7 +321,9 @@ export async function applyWorkingHoursToDays(formData: FormData) {
     create: { dayOfWeek, openingTime, closingTime, isOpen },
   })));
   revalidatePath("/admin/settings/availability");
+  revalidatePath("/admin/website");
   revalidatePath("/book");
+  revalidatePath("/contact");
 }
 
 export async function createBreakTime(formData: FormData) {

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 import { prisma } from "@/lib/prisma";
 import { createPublicBooking } from "./actions";
 import { BankAccountSelector } from "@/components/booking/bank-account-selector";
@@ -8,39 +8,27 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { PublicHeader } from "@/components/public/public-header";
+import { serviceProfiles } from "@/lib/courses/service-profiles";
+import { PublicShell } from "@/components/public/public-shell";
 import { BookingSubmissionGuard } from "@/components/booking/booking-submission-guard";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
+export const metadata = pageMetadata({
   title: "Book an Appointment",
-  description:
-    "Book a Viola Brows and Beauty appointment online. Choose a service, select an available time, and upload advance payment proof for review.",
-  alternates: {
-    canonical: "/book",
-  },
-  openGraph: {
-    title: "Book an Appointment | Viola Brows and Beauty",
-    description:
-      "Choose a service, select an available time, and upload advance payment proof for Viola Brows and Beauty.",
-    url: "/book",
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
-};
+  description: "Book a Viola Brows and Beauty appointment online. Choose a service, select an available time, and upload advance payment proof for review.",
+  path: "/book",
+});
 
 export default async function BookPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; retryAfter?: string }>;
+  searchParams: Promise<{ error?: string; retryAfter?: string; service?: string }>;
 }) {
   const query = await searchParams;
   const [services, bankAccounts] = await Promise.all([
     prisma.service.findMany({
-      where: { isActive: true, deletedAt: null },
+      where: { isActive: true, deletedAt: null, id: { in: serviceProfiles.flatMap((profile) => (profile.serviceId ? [profile.serviceId] : [])) } },
       include: { image: { select: { id: true } } },
       orderBy: { name: "asc" },
     }),
@@ -48,9 +36,8 @@ export default async function BookPage({
   ]);
 
   return (
-    <>
-      <PublicHeader />
-      <main className="mx-auto max-w-5xl px-6 py-10">
+    <PublicShell>
+      <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
       <div className="mb-8">
         <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">Book Appointment</p>
         <h1 className="font-display text-4xl font-bold">Choose service, time, and upload payment proof.</h1>
@@ -73,7 +60,7 @@ export default async function BookPage({
         </ul>
       </div>
 
-      <form id="public-booking-form" action={createPublicBooking} className="grid gap-6 lg:grid-cols-[1fr_0.85fr]">
+      <form id="public-booking-form" action={createPublicBooking} className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)] [&>*]:min-w-0">
         <BookingSubmissionGuard formId="public-booking-form" />
         <section className="space-y-6">
           <BookingSlotPicker
@@ -93,6 +80,7 @@ export default async function BookPage({
               hasImage: Boolean(service.image),
             }))}
             requirePrecautionAcknowledgement
+            initialServiceId={query.service}
           />
 
           <Card>
@@ -138,7 +126,7 @@ export default async function BookPage({
         </aside>
       </form>
       </main>
-    </>
+    </PublicShell>
   );
 }
 

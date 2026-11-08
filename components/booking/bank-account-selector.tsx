@@ -84,7 +84,7 @@ function CopyRow({ label, value, copied, onCopy }: { label: string; value: strin
     <div className="rounded-md border bg-white p-3">
       <p className="text-muted-foreground">{label}</p>
       <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
-        <p className="font-semibold tracking-wide">{value}</p>
+        <p className="min-w-0 break-all font-semibold tracking-wide">{value}</p>
         <button
           type="button"
           className="inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-semibold hover:bg-muted"

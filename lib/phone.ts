@@ -6,3 +6,10 @@ export function normalizeEthiopianPhone(value: string) {
   return null;
 }
 
+export function formatEthiopianPhone(value: string) {
+  const normalized = normalizeEthiopianPhone(value);
+  if (!normalized) return value.trim();
+  const local = normalized.slice(3);
+  return `+251 ${local.slice(0, 2)} ${local.slice(2, 5)} ${local.slice(5)}`;
+}
+

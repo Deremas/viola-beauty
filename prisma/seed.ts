@@ -2,6 +2,7 @@ import { addDays, addHours, setHours, setMinutes } from "date-fns";
 import { PrismaClient, type BookingSource, type BookingStatus, type PaymentStatus, type UserRole } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { servicePrecautionDefaults } from "../lib/service-precaution-defaults";
+import { seedCourseCatalog } from "./seed-courses";
 
 const prisma = new PrismaClient();
 
@@ -141,7 +142,7 @@ async function main() {
   await prisma.securitySetting.upsert({
     where: { id: "primary" },
     update: {},
-    create: { id: "primary" },
+    create: { id: "primary", sessionDurationDays: 1 },
   });
 
   const admin = await upsertUser({
@@ -161,12 +162,10 @@ async function main() {
   });
 
   const services = [
-    ["ombre-brows", "Ombre Brows", "Brows", "Soft powdered brow finish.", 8500, 2000, 150, 15],
+    ["ombre-brows", "Ombré Brows", "Brows", "Soft powdered brow finish.", 8500, 2000, 150, 15],
     ["nano-brows", "Nano Brows", "Brows", "Natural hair-stroke brow enhancement.", 9500, 2500, 180, 15],
-    ["lip-blush", "Lip Blush", "Lips", "Subtle lip color correction and definition.", 9000, 2500, 180, 20],
-    ["brow-lamination", "Brow Lamination", "Brows", "Lifted, groomed brows with shaping.", 2200, 700, 60, 10],
-    ["lash-lift", "Lash Lift", "Lashes", "Lifted lashes with clean curl and definition.", 1800, 500, 60, 10],
-    ["consultation", "Consultation", "Planning", "Shape, color, and treatment planning session.", 700, 300, 30, 0],
+    ["lip-blush", "Lip Blushing", "Lips", "Subtle lip color correction and definition.", 9000, 2500, 180, 20],
+    ["brow-lamination", "Eyebrow Lamination", "Brows", "Lifted, groomed brows with shaping.", 2200, 700, 60, 10],
   ] as const;
 
   for (const [id, name, category, description, price, advanceAmount, durationMinutes, bufferMinutes] of services) {
@@ -384,6 +383,8 @@ async function main() {
       sentAt: new Date(),
     },
   });
+
+  await seedCourseCatalog(prisma);
 }
 
 main()

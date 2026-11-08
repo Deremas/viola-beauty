@@ -13,6 +13,7 @@ function bounded(formData: FormData, key: string, min: number, max: number) {
 export async function saveSecuritySettings(formData: FormData) {
   await requireAdmin();
   const data = {
+    sessionDurationDays: bounded(formData, "sessionDurationDays", 1, 30),
     loginMax: bounded(formData, "loginMax", 3, 50),
     loginWindowSeconds: bounded(formData, "loginWindowSeconds", 60, 86400),
     bookingIpMax: bounded(formData, "bookingIpMax", 1, 100),

@@ -1,14 +1,23 @@
 import Link from "next/link";
+import { pageMetadata } from "@/lib/seo";
 import { CheckCircle2, FileText, Search, ShieldCheck } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { StatusBadge } from "@/lib/status";
 import { CopyBookingCode } from "@/components/booking/copy-booking-code";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { PublicHeader } from "@/components/public/public-header";
+import { PublicShell } from "@/components/public/public-shell";
 import { ClearBookingSubmission } from "@/components/booking/booking-submission-guard";
 
 export const dynamic = "force-dynamic";
+
+export const metadata = pageMetadata({
+  title: "Booking Received",
+  description: "Your Viola Brows and Beauty booking request was received and is waiting for payment review.",
+  path: "/book",
+  index: false,
+  canonical: false,
+});
 
 export default async function BookingSuccessPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
@@ -19,8 +28,7 @@ export default async function BookingSuccessPage({ params }: { params: Promise<{
   const bookingCode = booking?.bookingCode || code;
 
   return (
-    <>
-      <PublicHeader />
+    <PublicShell>
       <ClearBookingSubmission />
       <main className="flex min-h-[calc(100vh-65px)] items-center px-5 py-10 sm:px-6">
       <Card className="mx-auto w-full max-w-3xl overflow-hidden bg-white/90">
@@ -76,6 +84,6 @@ export default async function BookingSuccessPage({ params }: { params: Promise<{
         </CardContent>
       </Card>
       </main>
-    </>
+    </PublicShell>
   );
 }

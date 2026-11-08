@@ -9,7 +9,19 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ["var(--font-body)", "Segoe UI", "system-ui", "sans-serif"],
+        display: ["var(--font-display)", "Palatino Linotype", "Palatino", "Georgia", "serif"],
+      },
       colors: {
+        brand: "#96116F",
+        "brand-hover": "#7E0E5D",
+        "brand-pink": "#FF5DDE",
+        "brand-plum": "#241425",
+        "brand-soft": "#FDEBF9",
+        "brand-mist": "#F7F5F7",
+        "brand-header": "#F4E4EE",
+        "brand-line": "#E7DDE5",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         border: "hsl(var(--border))",

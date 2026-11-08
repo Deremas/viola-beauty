@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { TelegramNotificationChoices } from "@/components/admin/telegram-notification-choices";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import {
   createTelegramRecipient,
@@ -41,9 +42,8 @@ export default async function TelegramSettingsPage() {
           <CardContent>
             <form action={saveTelegramBot} className="grid gap-4">
               <Field label="Bot token">
-                <Input
+                <PasswordInput
                   name="botToken"
-                  type="password"
                   autoComplete="off"
                   placeholder={setting ? "Token saved - leave blank to keep it" : "Paste token from BotFather"}
                   required={!setting}

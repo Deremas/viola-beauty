@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { BarChart3, Banknote, CalendarCheck, CircleDollarSign, UserRoundCheck } from "lucide-react";
 import { prisma } from "@/lib/prisma";
-import { requirePermission } from "@/lib/permissions";
+import { hasPermission, requirePermission } from "@/lib/permissions";
 import { appDate, appDateRange } from "@/lib/timezone";
 import { formatStatus, money } from "@/lib/format";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import { Table, Td, Th } from "@/components/ui/table";
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 export default async function ReportsPage({ searchParams }: { searchParams: SearchParams }) {
-  await requirePermission("VIEW_REPORTS");
+  const user = await requirePermission("VIEW_REPORTS");
   const params = await searchParams;
   const today = appDate(new Date());
   const defaultFrom = `${today.slice(0, 8)}01`;
@@ -99,7 +99,10 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
           <h1 className="font-display text-3xl font-bold">Performance and payments</h1>
           <p className="mt-1 text-sm text-muted-foreground">Appointment dates and totals use East Africa Time.</p>
         </div>
-        <Button asChild variant="outline"><Link href="/admin/payments">Open payment records</Link></Button>
+        <div className="flex flex-wrap gap-2">
+          <Button asChild variant="outline"><Link href="/admin/payments">Open payment records</Link></Button>
+          {hasPermission(user, "VIEW_REGISTRATIONS") ? <Button asChild variant="outline"><Link href="/admin/courses/reports">Course reports</Link></Button> : null}
+        </div>
       </div>
 
       <Card>
