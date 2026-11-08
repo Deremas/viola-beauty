@@ -94,8 +94,8 @@ export async function addTopic(formData: FormData) {
   const moduleId = String(formData.get("moduleId") || "");
   const title = cleanLine(String(formData.get("title") || ""), 160);
   if (title.length < 2) courseBack(courseId, "Enter a topic title.");
-  const module = await prisma.courseModule.findFirst({ where: { id: moduleId, courseId } });
-  if (!module) courseBack(courseId, "That module is not on this course.");
+  const courseModule = await prisma.courseModule.findFirst({ where: { id: moduleId, courseId } });
+  if (!courseModule) courseBack(courseId, "That module is not on this course.");
   const count = await prisma.courseTopic.count({ where: { moduleId } });
   await prisma.courseTopic.create({ data: { moduleId, title, displayOrder: count + 1 } });
   revalidatePath("/courses");
