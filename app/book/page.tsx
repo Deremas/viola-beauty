@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { serviceProfiles } from "@/lib/courses/service-profiles";
+import { readIfReady } from "@/lib/courses/db";
 import { PublicShell } from "@/components/public/public-shell";
 import { BookingSubmissionGuard } from "@/components/booking/booking-submission-guard";
 
@@ -27,12 +28,12 @@ export default async function BookPage({
 }) {
   const query = await searchParams;
   const [services, bankAccounts] = await Promise.all([
-    prisma.service.findMany({
+    readIfReady(() => prisma.service.findMany({
       where: { isActive: true, deletedAt: null, id: { in: serviceProfiles.flatMap((profile) => (profile.serviceId ? [profile.serviceId] : [])) } },
       include: { image: { select: { id: true } } },
       orderBy: { name: "asc" },
-    }),
-    prisma.bankAccount.findMany({ where: { isActive: true, deletedAt: null }, orderBy: { bankName: "asc" } }),
+    }), []),
+    readIfReady(() => prisma.bankAccount.findMany({ where: { isActive: true, deletedAt: null }, orderBy: { bankName: "asc" } }), []),
   ]);
 
   return (
@@ -49,6 +50,10 @@ export default async function BookPage({
           <h2 className="font-display text-lg font-bold">We could not submit this booking</h2>
           <p className="mt-1 text-sm leading-6">{bookingErrorMessage(query.error, query.retryAfter)}</p>
         </div>
+      ) : null}
+
+      {services.length === 0 || bankAccounts.length === 0 ? (
+        <div className="mb-6 rounded-xl border border-brand-line bg-white p-5 text-sm leading-6">The online booking list is unavailable right now. Call the studio and the appointment can still be arranged.</div>
       ) : null}
 
       <div className="mb-6 rounded-xl border border-amber-300 bg-amber-50 p-5 text-amber-950">

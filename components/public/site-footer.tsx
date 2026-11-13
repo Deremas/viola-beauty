@@ -40,7 +40,6 @@ export function SiteFooter({ site }: { site: PublicSite }) {
             <li><Link className={linkClass} href="/courses">All Courses</Link></li>
             <li><Link className={linkClass} href="/courses#register">Student Registration</Link></li>
             <li><Link className={linkClass} href="/gallery">Gallery</Link></li>
-            <li><Link className={linkClass} href="/testimonials">Testimonials</Link></li>
             <li><Link className={linkClass} href="/contact">Contact</Link></li>
           </ul>
         </div>

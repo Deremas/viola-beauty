@@ -1,19 +1,16 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { ArrowRight, Clock, GraduationCap, Mail, MapPin, Phone, ShieldCheck, Sparkles } from "lucide-react";
+import { Clock, GraduationCap, Mail, MapPin, Phone, ShieldCheck, Sparkles } from "lucide-react";
 import { formatDuration } from "@/lib/format";
-import { companyName } from "@/lib/brand";
 import { getSiteUrl, pageMetadata, siteDescription, siteName } from "@/lib/seo";
-import { prisma } from "@/lib/prisma";
-import { readIfReady } from "@/lib/courses/db";
-import { getSiteContent } from "@/lib/courses/site";
+import { publicSite } from "@/lib/courses/site";
 import { loadPublicCourses, loadPublicServices } from "@/lib/courses/load";
 import { PublicShell } from "@/components/public/public-shell";
 import { Reveal } from "@/components/public/reveal";
 import { coursePhotos, courseStudioPhoto, photoForService } from "@/lib/courses/photos";
+import { studioResults } from "@/lib/courses/results";
+import { HeroCarousel } from "@/components/public/hero-carousel";
 import { Button } from "@/components/ui/button";
-
-export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = pageMetadata({
   title: `${siteName} | Beauty Services and Courses in Addis Ababa`,
@@ -23,12 +20,9 @@ export const metadata: Metadata = pageMetadata({
 });
 
 export default async function HomePage() {
-  const site = await getSiteContent();
-  const [services, courses, testimonials] = await Promise.all([
-    loadPublicServices(),
-    loadPublicCourses(),
-    readIfReady(() => prisma.testimonial.findMany({ where: { publicationStatus: "PUBLISHED" }, orderBy: { displayOrder: "asc" }, take: 3, select: { id: true, quote: true, authorName: true } }), []),
-  ]);
+  const site = publicSite;
+  const services = loadPublicServices();
+  const courses = loadPublicCourses();
   const featuredServices = services.filter((service) => service.featured).slice(0, 3);
   const featuredCourses = courses.filter((course) => course.featured).slice(0, 3);
   const structuredData = {
@@ -49,32 +43,25 @@ export default async function HomePage() {
     <PublicShell>
       <script type="application/ld+json" suppressHydrationWarning dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
       <main>
-        <section className="bg-brand-plum text-white">
-          <div className="mx-auto grid min-h-[78vh] max-w-7xl items-center gap-10 px-4 py-16 sm:px-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:py-20">
-            <div className="viola-rise min-w-0">
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-pink">{companyName}</p>
-              <h1 className="mt-4 max-w-xl font-display text-5xl font-semibold leading-[0.95] sm:text-7xl">{site.heroTitle}</h1>
-              <p className="mt-6 max-w-xl text-lg leading-8 text-white/80">{site.heroText}</p>
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-                <Button asChild size="lg" className="w-full bg-white text-brand-plum hover:bg-brand-soft sm:w-auto"><Link href="/book">Book a Service<ArrowRight className="h-4 w-4" /></Link></Button>
-                <Button asChild size="lg" variant="outline" className="w-full border-white/30 bg-transparent text-white hover:bg-white/10 sm:w-auto"><Link href="/courses">Explore Courses</Link></Button>
-              </div>
-            </div>
-            <img src={courseStudioPhoto} alt="Viola Brows and Beauty studio" className="min-h-[420px] w-full rounded-[2rem] object-cover" />
-          </div>
-        </section>
+        <HeroCarousel title={site.heroTitle} text={site.heroText} />
 
-        <section className="mx-auto grid max-w-7xl gap-10 px-4 py-20 sm:px-6 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand">About</p>
-            <h2 className="mt-3 font-display text-4xl font-semibold text-brand-plum sm:text-5xl">{site.aboutTitle}</h2>
-          </div>
-          <div>
-            <p className="text-lg leading-8 text-muted-foreground">{site.aboutText}</p>
-            <div className="mt-8 grid gap-4 sm:grid-cols-3 [&>*]:min-w-0">
-              <Fact icon={MapPin} label="Studio" value={`${site.addressLine}`} />
-              <Fact icon={Clock} label="Working hours" value="Monday to Saturday · By appointment" />
-              <Fact icon={ShieldCheck} label="Bookings" value="Confirmed after payment review" />
+        <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-20">
+          <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:gap-12">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand">About</p>
+              <h2 className="mt-3 max-w-md font-display text-3xl font-semibold leading-tight text-brand-plum sm:text-5xl">{site.aboutTitle}</h2>
+            </div>
+            <div>
+              <p className="max-w-xl text-base leading-7 text-muted-foreground sm:text-lg sm:leading-8">{site.aboutText}</p>
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                <Button asChild className="w-full sm:w-auto"><Link href="/book">Book a Service</Link></Button>
+                <Button asChild variant="outline" className="w-full sm:w-auto"><Link href="/courses">Explore Courses</Link></Button>
+              </div>
+              <div className="mt-8 grid gap-3 sm:grid-cols-3 [&>*]:min-w-0">
+                <Fact icon={MapPin} label="Studio" value={site.addressLine} />
+                <Fact icon={Clock} label="Working hours" value="Monday to Friday 09:00–18:00 · Saturday 09:00–17:00" />
+                <Fact icon={ShieldCheck} label="Bookings" value="Confirmed after we review your payment" />
+              </div>
             </div>
           </div>
         </section>
@@ -99,7 +86,7 @@ export default async function HomePage() {
                     <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand">{service.category}</p>
                     <h3 className="mt-2 font-display text-3xl font-semibold">{service.name}</h3>
                     <p className="mt-3 line-clamp-3 text-sm leading-6 text-muted-foreground">{service.summary}</p>
-                    <p className="mt-4 text-sm font-semibold">{[service.priceLabel, service.durationMinutes ? formatDuration(service.durationMinutes) : null].filter(Boolean).join(" · ") || "Price set at the studio"}</p>
+                    {service.durationMinutes ? <p className="mt-4 text-sm font-semibold">{formatDuration(service.durationMinutes)}</p> : null}
                     <div className="mt-5 flex flex-wrap gap-2">
                       <Button asChild variant="outline" size="sm"><Link href={`/services/${service.slug}`}>View Details</Link></Button>
                       <Button asChild size="sm"><Link href={service.serviceId ? `/book?service=${service.serviceId}` : "/book"}>Book a service</Link></Button>
@@ -119,7 +106,7 @@ export default async function HomePage() {
           <Reveal delay={90}>
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand">Courses</p>
             <h2 className="mt-3 font-display text-4xl font-semibold text-brand-plum sm:text-5xl">Practical beauty courses in the studio</h2>
-            <p className="mt-5 leading-8 text-muted-foreground">Choose a course, read the draft curriculum, and send a registration request. Viola reviews the request before a fee, seat, or start date is confirmed.</p>
+            <p className="mt-5 leading-8 text-muted-foreground">Courses cover brows, lips, lashes, makeup, nails, and wax. Students learn the skills through hands-on practice in the studio.</p>
             <Button asChild className="mt-6"><Link href="/courses">Explore Courses<GraduationCap className="h-4 w-4" /></Link></Button>
           </Reveal>
         </section>
@@ -139,7 +126,7 @@ export default async function HomePage() {
                   <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand">{course.category}</p>
                   <h3 className="mt-3 font-display text-3xl font-semibold">{course.name}</h3>
                   <p className="mt-3 line-clamp-3 flex-1 text-sm leading-6 text-muted-foreground">{course.shortDescription}</p>
-                  <p className="mt-4 text-sm font-semibold">{course.skillLevel === "BEGINNER" ? "Beginner" : course.skillLevel === "INTERMEDIATE" ? "Intermediate" : "Advanced"}{course.feeLabel ? ` · ${course.feeLabel}` : ""}</p>
+                  <p className="mt-4 text-sm font-semibold">{course.skillLevel === "BEGINNER" ? "Beginner" : course.skillLevel === "INTERMEDIATE" ? "Intermediate" : "Advanced"}</p>
                   <div className="mt-5 flex flex-wrap gap-2">
                     <Button asChild variant="outline" size="sm"><Link href={`/courses/${course.slug}`}>View Details</Link></Button>
                     {course.registrationOpen ? <Button asChild size="sm"><Link href={`/courses/${course.slug}/register`}>Register Now</Link></Button> : null}
@@ -155,35 +142,25 @@ export default async function HomePage() {
         <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6">
           <h2 className="font-display text-4xl font-semibold text-brand-plum">Why choose Viola</h2>
           <div className="mt-8 grid gap-4 md:grid-cols-3">
-            <Reveal className="h-full"><Reason icon={Sparkles} title="Services and courses together" text="Book a treatment or request a course without mixing the two workflows." /></Reveal>
-            <Reveal delay={90} className="h-full"><Reason icon={ShieldCheck} title="Reviewed before it is confirmed" text="Service appointments are confirmed after payment review. Course registration stays a request until staff approve it." /></Reveal>
-            <Reveal delay={180} className="h-full"><Reason icon={MapPin} title="One studio in Addis Ababa" text={`${site.addressLine}, ${site.city}. Call ${site.phonePrimaryDisplay} or ${site.phoneSecondaryDisplay}.`} /></Reveal>
+            <Reveal className="h-full"><Reason icon={Sparkles} title="Professional Beauty Services" text="Enjoy a range of beauty treatments delivered with care, precision, and attention to detail." /></Reveal>
+            <Reveal delay={90} className="h-full"><Reason icon={GraduationCap} title="Professional Beauty Training" text="Learn practical beauty skills and develop your expertise through hands-on training." /></Reveal>
+            <Reveal delay={180} className="h-full"><Reason icon={MapPin} title="Convenient Location in Addis Ababa" text="Visit us at CMC Safari, Fiyel Bet, Addis Ababa, Ethiopia." /></Reveal>
           </div>
         </section>
 
-        <section className="bg-brand-soft py-20">
+        <section id="results" className="bg-brand-soft py-20">
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
             <h2 className="font-display text-4xl font-semibold text-brand-plum">Real results</h2>
-            <img src={courseStudioPhoto} alt="Treatment room at Viola Brows and Beauty" width={1200} height={525} loading="lazy" decoding="async" className="mt-6 aspect-[16/7] w-full max-w-3xl rounded-2xl object-cover" />
-            <Button asChild variant="outline" className="mt-6"><Link href="/gallery">Open gallery</Link></Button>
-          </div>
-        </section>
-
-        <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6">
-          <h2 className="font-display text-4xl font-semibold text-brand-plum">Client and student words</h2>
-          {testimonials.length === 0 ? null : (
-            <div className="mt-8 grid gap-4 md:grid-cols-3">
-              {testimonials.map((item, index) => (
-                <Reveal key={item.id} delay={(index % 3) * 90} className="h-full">
-                <blockquote className="h-full rounded-2xl border border-brand-line bg-white p-5 shadow-soft transition duration-200 hover:border-brand hover:shadow-soft">
-                  <p className="leading-7">“{item.quote}”</p>
-                  <footer className="mt-4 text-sm font-semibold text-brand-plum">{item.authorName}</footer>
-                </blockquote>
-                </Reveal>
+            <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {studioResults.map((result) => (
+                <Link key={result.serviceSlug} href={`/services/${result.serviceSlug}`} className="group min-w-0 overflow-hidden rounded-2xl bg-white">
+                  <img src={result.image} alt={result.alt} width={960} height={960} loading="lazy" decoding="async" className="aspect-square w-full object-cover transition duration-300 group-hover:scale-[1.03] motion-reduce:transform-none" />
+                  <p className="px-4 py-3 font-semibold text-brand-plum">{result.title}</p>
+                </Link>
               ))}
             </div>
-          )}
-          <Button asChild variant="outline" className="mt-6"><Link href="/testimonials">Read testimonials</Link></Button>
+            <Button asChild variant="outline" className="mt-6"><Link href="/gallery">Open gallery</Link></Button>
+          </div>
         </section>
 
         <section className="bg-white">
@@ -207,7 +184,7 @@ export default async function HomePage() {
             </div>
             <div className="min-w-0 rounded-[2rem] bg-brand-plum p-5 text-white sm:p-8">
               <h2 className="font-display text-4xl font-semibold">Ready when you are.</h2>
-              <p className="mt-4 leading-7 text-white/75">{services.filter((service) => service.serviceId).length} services can be requested online today. Course fees stay hidden until Viola publishes them.</p>
+              <p className="mt-4 leading-7 text-white/75">{services.filter((service) => service.serviceId).length} services can be requested online today.</p>
               <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                 <Button asChild className="w-full bg-white text-brand-plum hover:bg-brand-soft sm:w-auto"><Link href="/book">Book a Service</Link></Button>
                 <Button asChild variant="outline" className="w-full border-white/30 bg-transparent text-white hover:bg-white/10 sm:w-auto"><Link href="/courses#register">Register for a Course</Link></Button>
@@ -222,10 +199,18 @@ export default async function HomePage() {
 }
 
 function Fact({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) {
-  return <div className="viola-card rounded-2xl border border-brand-line bg-white p-4"><Icon className="h-5 w-5 text-brand" /><p className="mt-3 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">{label}</p><p className="mt-1 text-sm font-semibold">{value}</p></div>;
+  return (
+    <div className="flex items-start gap-3 rounded-2xl border border-brand-line bg-white p-4">
+      <Icon className="mt-0.5 h-5 w-5 shrink-0 text-brand" />
+      <div className="min-w-0">
+        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">{label}</p>
+        <p className="mt-1 text-sm font-semibold leading-5">{value}</p>
+      </div>
+    </div>
+  );
 }
 
-function Reason({ icon: Icon, title, text }: { icon: React.ElementType; title: string; text: string }) {
+function Reason({ icon: Icon, title, text }: { icon: React.ElementType; title: string; text: React.ReactNode }) {
   return <article className="viola-card h-full rounded-2xl border border-brand-line bg-white p-6"><span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-soft text-brand"><Icon className="h-6 w-6" /></span><h3 className="mt-5 text-xl font-semibold">{title}</h3><p className="mt-3 leading-7 text-muted-foreground">{text}</p></article>;
 }
 

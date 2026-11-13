@@ -1,44 +1,22 @@
 import { pageMetadata } from "@/lib/seo";
 import Link from "next/link";
 import { Clock, Mail, MapPin, Phone } from "lucide-react";
-import { brand } from "@/lib/brand";
-import { prisma } from "@/lib/prisma";
-import { getSiteContent } from "@/lib/courses/site";
+import { brand, studioHours } from "@/lib/brand";
+import { publicSite } from "@/lib/courses/site";
 import { PublicShell } from "@/components/public/public-shell";
 import { Reveal } from "@/components/public/reveal";
 import { SocialLinks } from "@/components/public/social-links";
 import { Button } from "@/components/ui/button";
 
-export const dynamic = "force-dynamic";
 export const metadata = pageMetadata({
   title: "Contact and Location",
   description: "Call or visit Viola Brows and Beauty at Summit Safari Fiyel Bet, Soreti Bldg 2nd Floor, Addis Ababa. Phone numbers and studio hours are listed on this page.",
   path: "/contact",
 });
 
-const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-
-function groupHours(hours: { dayOfWeek: number; isOpen: boolean; openingTime: string; closingTime: string }[]) {
-  const groups: { start: number; end: number; label: string }[] = [];
-  for (const hour of [...hours].sort((a, b) => a.dayOfWeek - b.dayOfWeek)) {
-    const label = hour.isOpen ? `${hour.openingTime}–${hour.closingTime}` : "Closed";
-    const last = groups.at(-1);
-    if (last && last.label === label && hour.dayOfWeek === last.end + 1) last.end = hour.dayOfWeek;
-    else groups.push({ start: hour.dayOfWeek, end: hour.dayOfWeek, label });
-  }
-  return groups.map((group) => ({
-    days: group.start === group.end ? dayNames[group.start] : `${dayNames[group.start]} to ${dayNames[group.end]}`,
-    label: group.label,
-  }));
-}
-
 export default async function ContactPage({ searchParams }: { searchParams: Promise<{ service?: string }> }) {
   const query = await searchParams;
-  const [site, hours] = await Promise.all([
-    getSiteContent(),
-    prisma.workingHour.findMany({ orderBy: { dayOfWeek: "asc" } }),
-  ]);
-  const hourGroups = groupHours(hours);
+  const site = publicSite;
   const socials = [
     site.instagram ? { href: site.instagram, label: "Instagram", icon: "instagram" as const } : null,
     site.facebook ? { href: site.facebook, label: "Facebook", icon: "facebook" as const } : null,
@@ -73,9 +51,8 @@ export default async function ContactPage({ searchParams }: { searchParams: Prom
           <div className="viola-card rounded-2xl border border-brand-line bg-white p-6">
             <h2 className="flex items-center gap-2 font-display text-3xl font-semibold"><Clock className="h-6 w-6 text-brand" />Studio hours</h2>
             <ul className="mt-5 space-y-1 text-sm">
-              {hourGroups.map((group) => <li key={group.days} className="flex justify-between gap-4 border-b border-brand-line py-3 last:border-b-0"><span>{group.days}</span><span className="font-semibold">{group.label}</span></li>)}
+              {studioHours.map((group) => <li key={group.days} className="flex justify-between gap-4 border-b border-brand-line py-3 last:border-b-0"><span>{group.days}</span><span className="font-semibold">{group.label}</span></li>)}
             </ul>
-            {hours.length === 0 ? <p className="mt-4 text-sm text-muted-foreground">Hours are confirmed when you book or call.</p> : null}
           </div>
           <div className="mt-6 flex flex-wrap gap-3">
             <Button asChild><Link href="/book">Book a Service</Link></Button>

@@ -1,18 +1,18 @@
 import { pageMetadata } from "@/lib/seo";
 import Link from "next/link";
-import { getSiteContent } from "@/lib/courses/site";
+import { publicSite } from "@/lib/courses/site";
 import { PublicShell } from "@/components/public/public-shell";
 import { Reveal } from "@/components/public/reveal";
 import { Button } from "@/components/ui/button";
 
 export const metadata = pageMetadata({
   title: "About the Studio",
-  description: "Viola Brows and Beauty is a studio in Addis Ababa for beauty treatments and practical courses. Appointments are confirmed after payment review.",
+  description: "Viola Brows and Beauty is a studio in Addis Ababa for professional beauty treatments and hands-on beauty training.",
   path: "/about",
 });
 
 export default async function AboutPage() {
-  const site = await getSiteContent();
+  const site = publicSite;
   return (
     <PublicShell>
       <main>
@@ -25,7 +25,7 @@ export default async function AboutPage() {
         <Reveal>
         <div className="mx-auto max-w-3xl px-4 py-14 sm:px-6">
         <p className="text-lg leading-8 text-muted-foreground">{site.aboutText}</p>
-        <p className="mt-4 leading-8 text-muted-foreground">The studio is at {site.addressLine}, {site.city}. Clients book services online. Students send a course registration request, which staff review before confirming a fee or start date.</p>
+        <p className="mt-4 leading-8 text-muted-foreground">The studio is at {site.addressLine}, {site.city}.</p>
         <div className="mt-8 flex flex-wrap gap-3">
           <Button asChild><Link href="/book">Book a Service</Link></Button>
           <Button asChild variant="outline"><Link href="/courses">Explore Courses</Link></Button>

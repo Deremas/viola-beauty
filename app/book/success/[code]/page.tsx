@@ -1,15 +1,11 @@
 import Link from "next/link";
 import { pageMetadata } from "@/lib/seo";
 import { CheckCircle2, FileText, Search, ShieldCheck } from "lucide-react";
-import { prisma } from "@/lib/prisma";
-import { StatusBadge } from "@/lib/status";
 import { CopyBookingCode } from "@/components/booking/copy-booking-code";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PublicShell } from "@/components/public/public-shell";
 import { ClearBookingSubmission } from "@/components/booking/booking-submission-guard";
-
-export const dynamic = "force-dynamic";
 
 export const metadata = pageMetadata({
   title: "Booking Received",
@@ -21,11 +17,7 @@ export const metadata = pageMetadata({
 
 export default async function BookingSuccessPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
-  const booking = await prisma.booking.findUnique({
-    where: { bookingCode: code },
-    select: { bookingCode: true, status: true, payment: { select: { paymentStatus: true } } },
-  });
-  const bookingCode = booking?.bookingCode || code;
+  const bookingCode = code;
 
   return (
     <PublicShell>
@@ -52,10 +44,6 @@ export default async function BookingSuccessPage({ params }: { params: Promise<{
             </p>
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
               <CopyBookingCode code={bookingCode} />
-              <div className="flex flex-wrap gap-2">
-                {booking ? <StatusBadge status={booking.status} /> : null}
-                {booking?.payment ? <StatusBadge status={booking.payment.paymentStatus} /> : null}
-              </div>
             </div>
           </div>
 

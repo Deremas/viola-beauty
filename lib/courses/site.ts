@@ -23,7 +23,7 @@ export type PublicSite = {
   footerText: string;
 };
 
-const defaults: PublicSite = {
+export const publicSite: PublicSite = {
   heroTitle: brand.heroTitle,
   heroText: brand.heroText,
   aboutTitle: brand.aboutTitle,
@@ -44,25 +44,29 @@ const defaults: PublicSite = {
 };
 
 export async function getSiteContent(): Promise<PublicSite> {
-  const row = await readIfReady(() => prisma.siteSetting.findUnique({ where: { id: "primary" } }), null);
-  if (!row) return defaults;
-  return {
-    heroTitle: row.heroTitle || defaults.heroTitle,
-    heroText: row.heroText || defaults.heroText,
-    aboutTitle: row.aboutTitle || defaults.aboutTitle,
-    aboutText: row.aboutText || defaults.aboutText,
-    email: row.emailVerified && row.contactEmail ? row.contactEmail : null,
-    addressLine: row.addressLine || defaults.addressLine,
-    city: row.city || defaults.city,
-    phonePrimary: row.phonePrimary || defaults.phonePrimary,
-    phoneSecondary: row.phoneSecondary || defaults.phoneSecondary,
-    phonePrimaryDisplay: formatEthiopianPhone(row.phonePrimary || defaults.phonePrimary),
-    phoneSecondaryDisplay: formatEthiopianPhone(row.phoneSecondary || defaults.phoneSecondary),
-    hoursNote: row.hoursNote,
-    instagram: row.instagramUrl || null,
-    facebook: row.facebookUrl || null,
-    tiktok: row.tiktokUrl || null,
-    mapUrl: row.mapUrl || defaults.mapUrl,
-    footerText: row.footerText || defaults.footerText,
-  };
+  try {
+    const row = await readIfReady(() => prisma.siteSetting.findUnique({ where: { id: "primary" } }), null);
+    if (!row) return publicSite;
+    return {
+      heroTitle: row.heroTitle || publicSite.heroTitle,
+      heroText: row.heroText || publicSite.heroText,
+      aboutTitle: row.aboutTitle || publicSite.aboutTitle,
+      aboutText: row.aboutText || publicSite.aboutText,
+      email: row.emailVerified && row.contactEmail ? row.contactEmail : null,
+      addressLine: row.addressLine || publicSite.addressLine,
+      city: row.city || publicSite.city,
+      phonePrimary: row.phonePrimary || publicSite.phonePrimary,
+      phoneSecondary: row.phoneSecondary || publicSite.phoneSecondary,
+      phonePrimaryDisplay: formatEthiopianPhone(row.phonePrimary || publicSite.phonePrimary),
+      phoneSecondaryDisplay: formatEthiopianPhone(row.phoneSecondary || publicSite.phoneSecondary),
+      hoursNote: row.hoursNote,
+      instagram: row.instagramUrl || null,
+      facebook: row.facebookUrl || null,
+      tiktok: row.tiktokUrl || null,
+      mapUrl: row.mapUrl || publicSite.mapUrl,
+      footerText: row.footerText || publicSite.footerText,
+    };
+  } catch {
+    return publicSite;
+  }
 }

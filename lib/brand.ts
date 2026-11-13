@@ -24,12 +24,18 @@ export const brand = {
   heroTitle: "Enhance Your Beauty. Master Your Craft.",
   heroText:
     "Discover professional beauty treatments and practical beauty training at Viola Brows and Beauty in Addis Ababa.",
-  aboutTitle: "A studio for beauty services and practical training",
+  aboutTitle: "A beauty studio in Addis Ababa",
   aboutText:
-    "Viola Brows and Beauty welcomes clients for professional beauty treatments and students for hands-on beauty training in Addis Ababa. Book a service online, or request a place on a course. A registration request is reviewed by the studio before a fee, seat, or start date is confirmed.",
+    "Viola Brows and Beauty welcomes clients for professional beauty treatments and students for practical beauty training. Treatments cover brows, lips, lashes, makeup, nails, and wax, with care and attention to detail. Courses teach those same skills through hands-on practice in the studio.",
   footerText:
     "Professional beauty services and practical beauty training in Addis Ababa.",
 };
+
+export const studioHours = [
+  { days: "Monday to Friday", label: "09:00–18:00" },
+  { days: "Saturday", label: "09:00–17:00" },
+  { days: "Sunday", label: "Closed" },
+];
 
 export const defaultCourseFaqs = [
   {

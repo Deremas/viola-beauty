@@ -5,9 +5,8 @@ import { formatDuration } from "@/lib/format";
 import { loadPublicService } from "@/lib/courses/load";
 import { PublicShell } from "@/components/public/public-shell";
 import { photoForService } from "@/lib/courses/photos";
+import { resultForService } from "@/lib/courses/results";
 import { Button } from "@/components/ui/button";
-
-export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const service = await loadPublicService((await params).slug);
@@ -22,6 +21,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 export default async function ServiceDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const service = await loadPublicService((await params).slug);
   if (!service) notFound();
+  const result = resultForService(service.slug);
   const faqData = faqJsonLd(service.faqs);
   return (
     <PublicShell>
@@ -34,6 +34,7 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
       <main className="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:px-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] [&>*]:min-w-0">
         <article>
           <img alt={`${service.name} at Viola Brows and Beauty`} src={service.imageId ? `/api/public/services/${service.imageId}/image` : photoForService(service.slug)} width={960} height={720} decoding="async" className="aspect-[4/3] w-full rounded-[2rem] object-cover" />
+          {result ? <img src={result.image} alt={result.alt} width={960} height={960} loading="lazy" decoding="async" className="mt-6 w-full rounded-[2rem]" /> : null}
           <p className="mt-8 text-sm font-semibold uppercase tracking-[0.16em] text-brand">{service.category}</p>
           <h1 className="mt-3 font-display text-5xl font-semibold text-brand-plum">{service.name}</h1>
           <p className="mt-5 max-w-3xl text-lg leading-8 text-muted-foreground">{service.longDescription}</p>
@@ -44,7 +45,7 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
         </article>
         <aside className="h-fit rounded-2xl border bg-white p-6 lg:sticky lg:top-24">
           <h2 className="font-display text-3xl font-semibold">Book this service</h2>
-          <p className="mt-3 text-sm leading-6 text-muted-foreground">{service.priceLabel ? `${service.priceLabel}${service.advanceLabel ? ` · ${service.advanceLabel} advance` : ""}${service.durationMinutes ? ` · ${formatDuration(service.durationMinutes)}` : ""}` : "The price is confirmed on the booking page when this treatment is active on the calendar."}</p>
+          {service.durationMinutes ? <p className="mt-3 text-sm leading-6 text-muted-foreground">{formatDuration(service.durationMinutes)}</p> : null}
           <div className="mt-6 grid gap-3">
             <Button asChild><Link href={service.serviceId ? `/book?service=${service.serviceId}` : "/book"}>Book a service</Link></Button>
             {service.courseSlug ? <Button asChild variant="outline"><Link href={`/courses/${service.courseSlug}`}>View the course</Link></Button> : null}

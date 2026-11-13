@@ -8,10 +8,9 @@ import { Reveal } from "@/components/public/reveal";
 import { photoForService } from "@/lib/courses/photos";
 import { Button } from "@/components/ui/button";
 
-export const dynamic = "force-dynamic";
 export const metadata = pageMetadata({
   title: "Beauty Services",
-  description: "Browse brow, lip, eye, makeup, lash, nail, and waxing services at Viola Brows and Beauty. Book online when a price and time are published.",
+  description: "Browse brow, lip, eye, makeup, lash, nail, and waxing services at Viola Brows and Beauty in Addis Ababa.",
   path: "/services",
 });
 
@@ -23,8 +22,8 @@ export default async function ServicesPage() {
         <section className="bg-brand-plum text-white">
           <div className="viola-rise mx-auto max-w-7xl px-4 py-16 sm:px-6">
             <p className="text-sm font-semibold uppercase tracking-[0.16em] text-brand-pink">Services</p>
-            <h1 className="mt-4 max-w-3xl font-display text-5xl font-semibold leading-[0.95] sm:text-6xl">Treatments you can read, and book when the calendar is open.</h1>
-            <p className="mt-5 max-w-2xl text-lg leading-8 text-white/80">Every treatment uses the same booking calendar. A price appears when that service is saved and active.</p>
+            <h1 className="mt-4 max-w-3xl font-display text-5xl font-semibold leading-[0.95] sm:text-6xl">Professional beauty treatments</h1>
+            <p className="mt-5 max-w-2xl text-lg leading-8 text-white/80">Brows, lips, lashes, makeup, nails, and wax, offered with care and attention to detail.</p>
           </div>
         </section>
         <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
@@ -45,7 +44,7 @@ export default async function ServicesPage() {
                     <div className="flex flex-1 flex-col p-5">
                       <h3 className="font-display text-3xl font-semibold">{service.name}</h3>
                       <p className="mt-3 line-clamp-3 text-sm leading-6 text-muted-foreground">{service.summary}</p>
-                      <p className="mt-4 text-sm font-semibold">{[service.priceLabel, service.durationMinutes ? formatDuration(service.durationMinutes) : null].filter(Boolean).join(" · ") || "Price set at the studio"}</p>
+                      {service.durationMinutes ? <p className="mt-4 text-sm font-semibold">{formatDuration(service.durationMinutes)}</p> : null}
                       <div className="mt-auto flex flex-wrap gap-2 pt-5">
                         <Button asChild variant="outline" className="h-11"><Link href={`/services/${service.slug}`}>View Details</Link></Button>
                         <Button asChild className="h-11"><Link href={service.serviceId ? `/book?service=${service.serviceId}` : "/book"}>Book a service</Link></Button>

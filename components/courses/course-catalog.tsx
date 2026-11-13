@@ -53,7 +53,6 @@ export function CourseCatalog({ courses }: { courses: PublicCourse[] }) {
               <span className="inline-flex items-center gap-1"><Signal className="h-4 w-4 text-brand" />{levelLabel[course.skillLevel] || course.skillLevel}</span>
               <span className="inline-flex items-center gap-1"><Clock className="h-4 w-4 text-brand" />{course.durationLabel || "Timetable on request"}</span>
             </div>
-            {course.feeLabel ? <p className="mt-3 text-sm font-semibold">{course.feeLabel}</p> : <p className="mt-3 text-sm text-muted-foreground">Fee confirmed during registration</p>}
             <div className="mt-auto flex flex-wrap gap-2 pt-5">
               <Button asChild variant="outline" className="h-11"><Link href={`/courses/${course.slug}`}>View Details</Link></Button>
               {course.registrationOpen ? <Button asChild className="h-11"><Link href={`/courses/${course.slug}/register`}>Register Now</Link></Button> : <Button type="button" disabled className="h-11">Registration closed</Button>}

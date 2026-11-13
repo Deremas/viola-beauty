@@ -3,11 +3,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { loadPublicCourse, loadPublicCourses } from "@/lib/courses/load";
 import { coursePhotos } from "@/lib/courses/photos";
+import { resultForCourse } from "@/lib/courses/results";
 import { PublicShell } from "@/components/public/public-shell";
 import { Reveal } from "@/components/public/reveal";
 import { Button } from "@/components/ui/button";
-
-export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const course = await loadPublicCourse((await params).slug);
@@ -25,6 +24,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
   const { slug } = await params;
   const [course, courses] = await Promise.all([loadPublicCourse(slug), loadPublicCourses()]);
   if (!course) notFound();
+  const result = resultForCourse(course.slug);
   const related = courses.filter((item) => item.category === course.category && item.slug !== course.slug).slice(0, 3);
   const faqData = faqJsonLd(course.faqs);
 
@@ -43,11 +43,11 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
             <h1 className="font-display text-5xl font-semibold text-brand-plum">{course.name}</h1>
             <p className="mt-4 max-w-3xl text-lg leading-8 text-muted-foreground">{course.shortDescription}</p>
             <Reveal><img src={coursePhotos[course.slug] || "/courses/studio.jpg"} alt={`${course.name} at the Viola studio`} width={800} height={450} loading="lazy" decoding="async" className="mt-6 h-52 w-full max-w-2xl rounded-2xl object-cover sm:h-64" /></Reveal>
+            {result ? <img src={result.image} alt={result.alt} width={960} height={960} loading="lazy" decoding="async" className="mt-6 w-full max-w-2xl rounded-2xl" /> : null}
             <p className="mt-6 max-w-3xl leading-8 text-muted-foreground">{course.fullDescription}</p>
-            <dl className="mt-8 grid gap-3 sm:grid-cols-3">
+            <dl className="mt-8 grid gap-3 sm:grid-cols-2">
               <Meta label="Level" value={levelLabel[course.skillLevel] || course.skillLevel} />
               <Meta label="Duration" value={course.durationLabel || "Shared at registration"} />
-              <Meta label="Fee" value={course.feeLabel || "Not published"} />
             </dl>
             <Section title="Prerequisites"><p>{course.prerequisites}</p></Section>
             <Section title="Learning outcomes"><ul className="list-disc space-y-2 pl-5">{course.objectives.map((item) => <li key={item}>{item}</li>)}</ul></Section>
@@ -73,7 +73,6 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
             <div className="rounded-2xl border border-brand-line bg-white p-6">
               <h2 className="font-display text-3xl font-semibold">Registration</h2>
               <p className="mt-3 text-sm leading-6 text-muted-foreground">{course.registrationInfo}</p>
-              {course.depositLabel ? <p className="mt-4 text-sm">Deposit, if published: <strong>{course.depositLabel}</strong></p> : null}
               <div className="mt-6">
                 {course.registrationOpen ? <Button asChild className="w-full"><Link href={`/courses/${course.slug}/register`}>Register Now</Link></Button> : <p className="text-sm font-semibold">Registration is closed for this course.</p>}
               </div>
