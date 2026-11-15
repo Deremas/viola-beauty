@@ -2,13 +2,11 @@ import type { MetadataRoute } from "next";
 import { getSiteUrl } from "@/lib/seo";
 import { loadPublicCourses, loadPublicServices } from "@/lib/courses/load";
 
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+export default function sitemap(): MetadataRoute.Sitemap {
   const siteUrl = getSiteUrl();
   const now = new Date();
-  const [services, courses] = await Promise.all([
-    loadPublicServices().catch(() => []),
-    loadPublicCourses().catch(() => []),
-  ]);
+  const services = loadPublicServices();
+  const courses = loadPublicCourses();
 
   const staticRoutes: MetadataRoute.Sitemap = [
     { url: siteUrl, lastModified: now, changeFrequency: "weekly", priority: 1 },
