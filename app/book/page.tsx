@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { serviceProfiles } from "@/lib/courses/service-profiles";
-import { readIfReady } from "@/lib/courses/db";
+import { tryPublicDb } from "@/lib/db-safe";
 import { PublicShell } from "@/components/public/public-shell";
 import { BookingSubmissionGuard } from "@/components/booking/booking-submission-guard";
 
@@ -27,14 +27,28 @@ export default async function BookPage({
   searchParams: Promise<{ error?: string; retryAfter?: string; service?: string }>;
 }) {
   const query = await searchParams;
-  const [services, bankAccounts] = await Promise.all([
-    readIfReady(() => prisma.service.findMany({
+  const fieldError = fieldForBookingError(query.error);
+  const [servicesResult, banksResult] = await Promise.all([
+    tryPublicDb("book-services", () => prisma.service.findMany({
       where: { isActive: true, deletedAt: null, id: { in: serviceProfiles.flatMap((profile) => (profile.serviceId ? [profile.serviceId] : [])) } },
       include: { image: { select: { id: true } } },
       orderBy: { name: "asc" },
-    }), []),
-    readIfReady(() => prisma.bankAccount.findMany({ where: { isActive: true, deletedAt: null }, orderBy: { bankName: "asc" } }), []),
+    })),
+    tryPublicDb("book-banks", () => prisma.bankAccount.findMany({ where: { isActive: true, deletedAt: null }, orderBy: { bankName: "asc" } })),
   ]);
+  const services = servicesResult.ok ? servicesResult.data : [];
+  const bankAccounts = banksResult.ok ? banksResult.data : [];
+  const serviceNote = !servicesResult.ok
+    ? "Services could not be loaded. Refresh this page and try again."
+    : services.length === 0
+      ? "No services are open for online booking right now."
+      : null;
+  const bankNote = !banksResult.ok
+    ? "Payment accounts could not be loaded. Refresh this page and try again."
+    : bankAccounts.length === 0
+      ? "No payment account is open for online booking right now."
+      : null;
+  const canSubmit = services.length > 0 && bankAccounts.length > 0;
 
   return (
     <PublicShell>
@@ -45,15 +59,11 @@ export default async function BookPage({
         <p className="mt-3 max-w-2xl text-muted-foreground">Your booking is reviewed after you upload a clear transfer screenshot.</p>
       </div>
 
-      {query.error ? (
+      {query.error && !fieldError ? (
         <div className="mb-6 rounded-xl border border-destructive/30 bg-destructive/5 p-5 text-destructive" role="alert">
           <h2 className="font-display text-lg font-bold">We could not submit this booking</h2>
           <p className="mt-1 text-sm leading-6">{bookingErrorMessage(query.error, query.retryAfter)}</p>
         </div>
-      ) : null}
-
-      {services.length === 0 || bankAccounts.length === 0 ? (
-        <div className="mb-6 rounded-xl border border-brand-line bg-white p-5 text-sm leading-6">The online booking list is unavailable right now. Call the studio and the appointment can still be arranged.</div>
       ) : null}
 
       <div className="mb-6 rounded-xl border border-amber-300 bg-amber-50 p-5 text-amber-950">
@@ -87,6 +97,7 @@ export default async function BookPage({
             requirePrecautionAcknowledgement
             initialServiceId={query.service}
           />
+          {serviceNote ? <p className="text-sm leading-6 text-destructive" role="alert">{serviceNote}</p> : null}
 
           <Card>
             <CardHeader>
@@ -100,7 +111,8 @@ export default async function BookPage({
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="phone">Phone</Label>
-                  <Input id="phone" name="phone" required />
+                  <Input id="phone" name="phone" required aria-invalid={fieldError === "phone"} />
+                  <FieldNote active={fieldError === "phone"} code={query.error} retryAfter={query.retryAfter} />
                 </div>
               </div>
               <div className="space-y-2">
@@ -125,7 +137,9 @@ export default async function BookPage({
               instructions: account.instructions,
             }))}
           />
-          <Button type="submit" pendingText="Sending booking request..." disabled={services.length === 0 || bankAccounts.length === 0}>
+          {bankNote ? <p className="text-sm leading-6 text-destructive" role="alert">{bankNote}</p> : null}
+          <FieldNote active={fieldError === "bank" || fieldError === "proof" || fieldError === "service" || fieldError === "time" || fieldError === "precautions"} code={query.error} retryAfter={query.retryAfter} />
+          <Button type="submit" pendingText="Sending booking request..." disabled={!canSubmit}>
             Send booking request
           </Button>
         </aside>
@@ -148,9 +162,24 @@ function bookingErrorMessage(code: string, retryAfter?: string) {
     PRECAUTIONS_REQUIRED: "Please read and accept the selected service precautions.",
     PAST_SLOT: "The selected appointment time has passed. Please choose a future time.",
     PROOF_REQUIRED: "Upload a clear payment proof before sending the booking request.",
+    UNAVAILABLE: "The booking could not be saved. Refresh this page and try again.",
     RATE_LIMITED: `Too many booking attempts were received. Please wait ${formatRetryTime(retryAfter)} and try again.`,
   };
   return messages[code] || "An unexpected problem occurred. Your booking may still have been saved, so check your booking status before submitting again.";
+}
+
+function fieldForBookingError(code?: string) {
+  if (code === "INVALID_PHONE") return "phone";
+  if (code === "PROOF_REQUIRED") return "proof";
+  if (code === "BANK_UNAVAILABLE") return "bank";
+  if (code === "SERVICE_UNAVAILABLE" || code === "PRECAUTIONS_REQUIRED") return code === "PRECAUTIONS_REQUIRED" ? "precautions" : "service";
+  if (code === "PAST_SLOT" || code === "SLOT_TAKEN") return "time";
+  return null;
+}
+
+function FieldNote({ active, code, retryAfter }: { active: boolean; code?: string; retryAfter?: string }) {
+  if (!active || !code) return null;
+  return <p className="text-sm leading-6 text-destructive" role="alert">{bookingErrorMessage(code, retryAfter)}</p>;
 }
 
 function formatRetryTime(retryAfter?: string) {

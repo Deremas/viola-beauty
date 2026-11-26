@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { Archive, Eye, KeyRound, Pencil, Plus, Power, PowerOff, RotateCcw, ShieldCheck } from "lucide-react";
+import { Eye, Pencil, Plus, Power, PowerOff, RotateCcw, ShieldCheck } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/permissions";
 import { StatusBadge } from "@/lib/status";
 import { archiveUser, restoreUser, setUserActive } from "../actions";
+import { ConfirmDeleteButton } from "@/components/admin/confirm-delete-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, Td, Th } from "@/components/ui/table";
@@ -21,7 +22,7 @@ export default async function UsersPage() {
         <Button asChild variant="outline" size="icon" title="View staff user"><Link href={`/admin/settings/users/${user.id}`}><Eye className="h-4 w-4" /><span className="sr-only">View staff user</span></Link></Button>
         <Button asChild variant="outline" size="icon" title="Edit staff user or reset password"><Link href={`/admin/settings/users/${user.id}/edit`}><Pencil className="h-4 w-4" /><span className="sr-only">Edit staff user</span></Link></Button>
         <form action={setUserActive}><input type="hidden" name="id" value={user.id} /><input type="hidden" name="isActive" value={user.isActive ? "false" : "true"} /><Button type="submit" variant="outline" size="icon" title={user.isActive ? "Deactivate user" : "Activate user"}>{user.isActive ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4" />}<span className="sr-only">Change user status</span></Button></form>
-        <form action={archiveUser}><input type="hidden" name="id" value={user.id} /><Button type="submit" variant="destructive" size="icon" title="Archive staff user"><Archive className="h-4 w-4" /><span className="sr-only">Archive staff user</span></Button></form>
+        <ConfirmDeleteButton action={archiveUser} id={user.id} name={user.name} label="Remove" description="This person can no longer sign in. Their past bookings stay on record, and you can restore the account from the archive." />
       </div></Td></tr>)}
       {current.length === 0 ? <tr><Td colSpan={6} className="text-center text-muted-foreground">No staff users found.</Td></tr> : null}
     </tbody></Table></CardContent></Card>

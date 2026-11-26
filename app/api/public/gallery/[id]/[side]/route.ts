@@ -1,9 +1,16 @@
 import { prisma } from "@/lib/prisma";
+import { isDbError } from "@/lib/db-errors";
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string; side: string }> }) {
   const { id, side } = await params;
   if (side !== "before" && side !== "after") return new Response("Not found", { status: 404 });
-  const item = await prisma.galleryAsset.findUnique({ where: { id } });
+  let item;
+  try {
+    item = await prisma.galleryAsset.findUnique({ where: { id } });
+  } catch (error) {
+    if (isDbError(error)) return new Response("Unavailable", { status: 503, headers: { "Cache-Control": "no-store" } });
+    throw error;
+  }
   if (!item || item.publicationStatus !== "PUBLISHED") return new Response("Not found", { status: 404 });
   if (item.kind === "RESULT" && (!item.consentRecorded || !item.beforeData || !item.afterData)) return new Response("Not found", { status: 404 });
   const data = side === "before" ? item.beforeData : item.afterData;

@@ -9,25 +9,26 @@ import { localDateTimeToUtc } from "@/lib/timezone";
 import { sendTelegramBookingNotification } from "@/lib/telegram";
 import { shortDateTime } from "@/lib/format";
 import { sendClientBookingSms } from "@/lib/sms";
+import { failForm } from "@/lib/form-feedback";
 
 async function changeStatus(bookingId: string, newStatus: "CANCELLED" | "COMPLETED") {
   const user = await requirePermission("MANAGE_BOOKINGS");
   const booking = await prisma.booking.findUnique({ where: { id: bookingId }, include: { payment: true } });
-  if (!booking) throw new Error("Booking not found");
+  if (!booking) return failForm("Booking not found");
   if (["CANCELLED", "COMPLETED", "REJECTED", "EXPIRED", "NO_SHOW"].includes(booking.status)) {
-    throw new Error("This booking is already closed and cannot be changed");
+    return failForm("This booking is already closed and cannot be changed");
   }
   if (newStatus === "COMPLETED" && booking.payment?.paymentStatus !== "FULLY_PAID") {
-    throw new Error("Record full payment before completing this booking");
+    return failForm("Record full payment before completing this booking");
   }
   if (newStatus === "COMPLETED" && booking.status !== "CONFIRMED") {
-    throw new Error("Only a confirmed booking can be completed");
+    return failForm("Only a confirmed booking can be completed");
   }
   if (newStatus === "COMPLETED" && booking.startDateTime.getTime() > Date.now()) {
-    throw new Error("Wait until the appointment start time before marking it completed");
+    return failForm("Wait until the appointment start time before marking it completed");
   }
   if (newStatus === "CANCELLED" && booking.status === "CONFIRMED" && booking.startDateTime.getTime() <= Date.now()) {
-    throw new Error("A past confirmed appointment cannot be cancelled. Mark it completed or no-show");
+    return failForm("A past confirmed appointment cannot be cancelled. Mark it completed or no-show");
   }
 
   await prisma.$transaction([
@@ -53,23 +54,23 @@ async function changeStatus(bookingId: string, newStatus: "CANCELLED" | "COMPLET
 export async function confirmPayment(formData: FormData) {
   const bookingId = String(formData.get("bookingId"));
   const user = await requireUser();
-  if (!canConfirmPayment(user)) throw new Error("Forbidden");
+  if (!canConfirmPayment(user)) return failForm("Forbidden");
 
   const booking = await prisma.booking.findUnique({ where: { id: bookingId }, include: { payment: true, service: true } });
-  if (!booking || !booking.payment) throw new Error("Booking not found");
+  if (!booking || !booking.payment) return failForm("Booking not found");
   if (["CANCELLED", "COMPLETED", "REJECTED", "EXPIRED", "NO_SHOW"].includes(booking.status)) {
-    throw new Error("Payment cannot be reviewed for a closed booking");
+    return failForm("Payment cannot be reviewed for a closed booking");
   }
-  if (booking.payment.paymentStatus !== "PROOF_UPLOADED") throw new Error("This payment has already been reviewed");
+  if (booking.payment.paymentStatus !== "PROOF_UPLOADED") return failForm("This payment has already been reviewed");
 
   const paidAmount = Number(formData.get("paidAmount"));
   const paymentMethod = String(formData.get("paymentMethod") || "").trim();
   const requiredAdvance = Number(booking.payment.requiredAdvanceAmount);
   const servicePrice = Number(booking.service.price);
   if (!Number.isFinite(paidAmount) || paidAmount < requiredAdvance) {
-    throw new Error(`Amount received must be at least ${requiredAdvance} ETB`);
+    return failForm(`Amount received must be at least ${requiredAdvance} ETB`);
   }
-  if (!paymentMethod) throw new Error("Choose a payment method");
+  if (!paymentMethod) return failForm("Choose a payment method");
   const paymentStatus = paidAmount >= servicePrice ? "FULLY_PAID" : "ADVANCE_CONFIRMED";
 
   await prisma.$transaction([
@@ -98,24 +99,24 @@ export async function recordAdditionalPayment(formData: FormData) {
   const additionalAmount = Number(formData.get("additionalAmount"));
   const paymentMethod = String(formData.get("paymentMethod") || "").trim();
   const user = await requireUser();
-  if (!canConfirmPayment(user)) throw new Error("Forbidden");
-  if (!Number.isFinite(additionalAmount) || additionalAmount <= 0) throw new Error("Enter a positive payment amount");
-  if (!paymentMethod) throw new Error("Choose a payment method");
+  if (!canConfirmPayment(user)) return failForm("Forbidden");
+  if (!Number.isFinite(additionalAmount) || additionalAmount <= 0) return failForm("Enter a positive payment amount");
+  if (!paymentMethod) return failForm("Choose a payment method");
 
   const booking = await prisma.booking.findUnique({
     where: { id: bookingId },
     include: { payment: true, service: true },
   });
-  if (!booking?.payment) throw new Error("Booking payment not found");
+  if (!booking?.payment) return failForm("Booking payment not found");
   if (["CANCELLED", "COMPLETED", "REJECTED", "EXPIRED", "NO_SHOW"].includes(booking.status)) {
-    throw new Error("Payment cannot be changed for a closed booking");
+    return failForm("Payment cannot be changed for a closed booking");
   }
-  if (booking.payment.paymentStatus !== "ADVANCE_CONFIRMED") throw new Error("Additional payment cannot be recorded for this booking");
+  if (booking.payment.paymentStatus !== "ADVANCE_CONFIRMED") return failForm("Additional payment cannot be recorded for this booking");
 
   const currentPaid = Number(booking.payment.paidAmount || booking.payment.requiredAdvanceAmount);
   const servicePrice = Number(booking.service.price);
   const totalPaid = currentPaid + additionalAmount;
-  if (totalPaid > servicePrice) throw new Error(`Payment exceeds the remaining balance of ${servicePrice - currentPaid} ETB`);
+  if (totalPaid > servicePrice) return failForm(`Payment exceeds the remaining balance of ${servicePrice - currentPaid} ETB`);
   const paymentStatus = totalPaid >= servicePrice ? "FULLY_PAID" : "ADVANCE_CONFIRMED";
 
   await prisma.$transaction([
@@ -144,12 +145,12 @@ export async function rejectPayment(formData: FormData) {
   const bookingId = String(formData.get("bookingId"));
   const reason = String(formData.get("reason") || "Payment rejected");
   const user = await requireUser();
-  if (!canConfirmPayment(user)) throw new Error("Forbidden");
+  if (!canConfirmPayment(user)) return failForm("Forbidden");
 
   const booking = await prisma.booking.findUnique({ where: { id: bookingId }, include: { payment: true } });
-  if (!booking || !booking.payment) throw new Error("Booking not found");
+  if (!booking || !booking.payment) return failForm("Booking not found");
   if (["CANCELLED", "COMPLETED", "REJECTED", "EXPIRED", "NO_SHOW"].includes(booking.status)) {
-    throw new Error("Payment cannot be rejected for a closed booking");
+    return failForm("Payment cannot be rejected for a closed booking");
   }
 
   await prisma.$transaction([
@@ -178,11 +179,11 @@ export async function markNoShow(formData: FormData) {
   const bookingId = String(formData.get("bookingId"));
   const user = await requirePermission("MANAGE_BOOKINGS");
   const booking = await prisma.booking.findUnique({ where: { id: bookingId }, include: { payment: true } });
-  if (!booking?.payment) throw new Error("Booking payment not found");
-  if (booking.status !== "CONFIRMED") throw new Error("Only a confirmed booking can be marked as a no-show");
-  if (booking.startDateTime.getTime() > Date.now()) throw new Error("Wait until the appointment start time before marking a no-show");
+  if (!booking?.payment) return failForm("Booking payment not found");
+  if (booking.status !== "CONFIRMED") return failForm("Only a confirmed booking can be marked as a no-show");
+  if (booking.startDateTime.getTime() > Date.now()) return failForm("Wait until the appointment start time before marking a no-show");
   if (!["ADVANCE_CONFIRMED", "FULLY_PAID"].includes(booking.payment.paymentStatus)) {
-    throw new Error("The advance payment must be confirmed before marking a no-show");
+    return failForm("The advance payment must be confirmed before marking a no-show");
   }
 
   const forfeitedAmount = Number(booking.payment.requiredAdvanceAmount);
@@ -216,23 +217,23 @@ export async function rescheduleBooking(formData: FormData) {
   const time = String(formData.get("time") || "");
   const user = await requirePermission("MANAGE_BOOKINGS");
 
-  if (!date || !time) throw new Error("Choose a new date and time");
+  if (!date || !time) return failForm("Choose a new date and time");
 
   const booking = await prisma.booking.findUnique({
     where: { id: bookingId },
     include: { service: true },
   });
-  if (!booking) throw new Error("Booking not found");
+  if (!booking) return failForm("Booking not found");
   if (["CANCELLED", "COMPLETED", "REJECTED", "EXPIRED", "NO_SHOW"].includes(booking.status)) {
-    throw new Error("A closed booking cannot be rescheduled. Create a new booking instead");
+    return failForm("A closed booking cannot be rescheduled. Create a new booking instead");
   }
   if (booking.status === "CONFIRMED" && booking.startDateTime.getTime() <= Date.now()) {
-    throw new Error("A past confirmed appointment cannot be rescheduled. Mark it completed or no-show");
+    return failForm("A past confirmed appointment cannot be rescheduled. Mark it completed or no-show");
   }
 
   const startDateTime = localDateTimeToUtc(date, time);
   if (!(await isSlotAvailable(booking.serviceId, startDateTime, booking.id))) {
-    throw new Error("This new slot is unavailable");
+    return failForm("This new slot is unavailable");
   }
 
   const endDateTime = addMinutes(startDateTime, booking.service.durationMinutes + booking.service.bufferMinutes);

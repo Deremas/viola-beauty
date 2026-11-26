@@ -26,7 +26,7 @@ export default async function ServicesSettingsPage({ searchParams }: { searchPar
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="font-display text-3xl font-bold">Services</h1>
-          <p className="text-sm text-muted-foreground">All services are loaded from the database and shown to clients when active.</p>
+          <p className="text-sm text-muted-foreground">Active services are offered to clients on the booking page.</p>
         </div>
         <Button asChild>
           <Link href="/admin/settings/services/create">

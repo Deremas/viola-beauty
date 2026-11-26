@@ -1,10 +1,11 @@
-import { Check, ClipboardCheck, Trash2 } from "lucide-react";
+import { Check, ClipboardCheck } from "lucide-react";
 import { StaffTaskPriority, StaffTaskStatus, UserRole } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/permissions";
 import { shortDateTime } from "@/lib/format";
 import { StatusBadge } from "@/lib/status";
 import { createTask, deleteTask, updateTaskStatus } from "./actions";
+import { ConfirmDeleteButton } from "@/components/admin/confirm-delete-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -137,12 +138,7 @@ export default async function TasksPage() {
                           <Check className="h-4 w-4" />
                         </Button>
                       </form>
-                      <form action={deleteTask}>
-                        <input type="hidden" name="id" value={task.id} />
-                        <Button type="submit" variant="destructive" size="icon" title="Delete task" aria-label={`Delete ${task.title}`}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </form>
+                      <ConfirmDeleteButton action={deleteTask} id={task.id} name={task.title} description="This task is removed from the staff list." />
                     </div>
                   </Td>
                 </tr>

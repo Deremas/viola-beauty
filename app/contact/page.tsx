@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 
 export const metadata = pageMetadata({
   title: "Contact and Location",
-  description: "Call or visit Viola Brows and Beauty at Summit Safari Fiyel Bet, Soreti Bldg 2nd Floor, Addis Ababa. Phone numbers and studio hours are listed on this page.",
+  description: "Call or visit Viola Brows and Beauty at Fiyel Bet, Soreti Bldg 2nd Floor, Addis Ababa. Phone numbers and studio hours are listed on this page.",
   path: "/contact",
 });
 

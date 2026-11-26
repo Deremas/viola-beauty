@@ -1,5 +1,6 @@
 import { MessageSquareText } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { withDb } from "@/lib/db-safe";
 import { requirePermission } from "@/lib/permissions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +11,12 @@ import { saveSmsSettings, testSmsSettings } from "./actions";
 
 export default async function SmsSettingsPage() {
   await requirePermission("MANAGE_NOTIFICATIONS");
-  const setting = await prisma.smsSetting.findUnique({ where: { id: "primary" } });
+  const loaded = await withDb<{ ok: boolean; setting: Awaited<ReturnType<typeof prisma.smsSetting.findUnique>> }>(
+    "sms-settings",
+    async () => ({ ok: true, setting: await prisma.smsSetting.findUnique({ where: { id: "primary" } }) }),
+    { ok: false, setting: null },
+  );
+  const setting = loaded.setting;
 
   return (
     <div className="space-y-6">
@@ -27,12 +33,15 @@ export default async function SmsSettingsPage() {
           <CardHeader><CardTitle>AfroMessage connection</CardTitle></CardHeader>
           <CardContent>
             <form action={saveSmsSettings} className="grid gap-4">
-              <Field label="API token">
-                <PasswordInput name="apiToken" autoComplete="off" required={!setting} placeholder={setting ? "Token saved - leave blank to keep it" : "Paste AfroMessage API token"} />
+              {!loaded.ok ? (
+                <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm leading-6 text-amber-950">SMS settings could not be loaded. Nothing on this page was changed.</p>
+              ) : null}
+              <Field label="AfroMessage API key">
+                <PasswordInput name="apiToken" autoComplete="off" required={!setting} placeholder={setting ? "Key saved - leave blank to keep it" : "Paste the AfroMessage API key"} />
               </Field>
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Identifier ID">
-                  <Input name="identifierId" defaultValue={setting?.identifierId || ""} placeholder="Your AfroMessage identifier ID" required />
+                <Field label="AfroMessage account id">
+                  <Input name="identifierId" defaultValue={setting?.identifierId || ""} placeholder="Your AfroMessage account id" required />
                 </Field>
                 <Field label="Sender name">
                   <Input name="senderName" defaultValue={setting?.senderName || ""} placeholder="Viola" required />
@@ -50,7 +59,7 @@ export default async function SmsSettingsPage() {
                 </p>
               </div>
               <p className="rounded-md bg-muted p-3 text-sm text-muted-foreground">
-                The API token is encrypted with AUTH_SECRET before it is stored. SMS delivery charges are billed by AfroMessage.
+                The AfroMessage key is stored privately on the server. SMS delivery charges are billed by AfroMessage.
               </p>
               <div className="flex justify-end"><Button type="submit" pendingText="Saving SMS settings...">Save SMS settings</Button></div>
             </form>

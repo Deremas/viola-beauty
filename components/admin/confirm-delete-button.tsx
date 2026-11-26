@@ -10,12 +10,16 @@ export function ConfirmDeleteButton({
   name,
   description,
   allow = true,
+  label = "Delete",
+  fields,
 }: {
   action: (formData: FormData) => void | Promise<void>;
   id: string;
   name: string;
   description: string;
   allow?: boolean;
+  label?: string;
+  fields?: Record<string, string>;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -30,9 +34,9 @@ export function ConfirmDeleteButton({
 
   return (
     <>
-      <Button type="button" variant="destructive" size="sm" onClick={() => setOpen(true)} aria-label={`Delete ${name}`}>
+      <Button type="button" variant="destructive" size="sm" onClick={() => setOpen(true)} aria-label={`${label} ${name}`}>
         <Trash2 className="h-4 w-4" />
-        Delete
+        {label}
       </Button>
       {open ? (
         <div
@@ -47,11 +51,12 @@ export function ConfirmDeleteButton({
           <form action={action} className="w-full max-w-md rounded-2xl bg-white p-6 shadow-soft">
             <input type="hidden" name="id" value={id} />
             <input type="hidden" name="confirm" value="yes" />
-            <h2 id="confirm-delete-title" className="font-display text-2xl font-semibold">Delete {name}?</h2>
+            {fields ? Object.entries(fields).map(([key, value]) => <input key={key} type="hidden" name={key} value={value} />) : null}
+            <h2 id="confirm-delete-title" className="font-display text-2xl font-semibold">{label} {name}?</h2>
             <p className="mt-3 text-sm leading-6 text-muted-foreground">{description}</p>
             <div className="mt-6 flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-              {allow ? <Button type="submit" variant="destructive" pendingText="Deleting...">Delete</Button> : null}
+              {allow ? <Button type="submit" variant="destructive" pendingText={`${label}...`}>{label}</Button> : null}
             </div>
           </form>
         </div>

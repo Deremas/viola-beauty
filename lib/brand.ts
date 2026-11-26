@@ -8,7 +8,7 @@ export const brand = {
   soft: "#FDEBF9",
   mist: "#F7F5F7",
   line: "#E7DDE5",
-  addressLine: "Summit Safari Fiyel Bet, Soreti Bldg 2nd Floor",
+  addressLine: "Fiyel Bet, Soreti Bldg 2nd Floor",
   city: "Addis Ababa, Ethiopia",
   mapUrl: "https://maps.app.goo.gl/kERdt391N2t8BPAj8",
   mapEmbedUrl: "https://www.google.com/maps/embed?pb=!1m4!3m2!1m1!4s15442018708675115743!6i16",
@@ -24,9 +24,9 @@ export const brand = {
   heroTitle: "Enhance Your Beauty. Master Your Craft.",
   heroText:
     "Discover professional beauty treatments and practical beauty training at Viola Brows and Beauty in Addis Ababa.",
-  aboutTitle: "A beauty studio in Addis Ababa",
+  aboutTitle: "A studio and institute in Addis Ababa",
   aboutText:
-    "Viola Brows and Beauty welcomes clients for professional beauty treatments and students for practical beauty training. Treatments cover brows, lips, lashes, makeup, nails, and wax, with care and attention to detail. Courses teach those same skills through hands-on practice in the studio.",
+    "Viola Brows and Beauty specialises in permanent makeup, lashes, brows, makeup, nails, and waxing. Viola Beauty Institute trains students in those same skills, with a new class every month.",
   footerText:
     "Professional beauty services and practical beauty training in Addis Ababa.",
 };
@@ -55,6 +55,6 @@ export const defaultCourseFaqs = [
   },
   {
     question: "Where is the studio?",
-    answer: "Viola Brows and Beauty is at Summit Safari Fiyel Bet, Soreti Bldg 2nd Floor, Addis Ababa.",
+    answer: "Viola Brows and Beauty is at Fiyel Bet, Soreti Bldg 2nd Floor, Addis Ababa.",
   },
 ];

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/permissions";
 import { deleteGalleryAsset, saveGalleryAsset, updateGalleryAsset } from "../content-actions";
+import { ConfirmDeleteButton } from "@/components/admin/confirm-delete-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -40,7 +41,8 @@ export default async function GalleryAdminPage({ searchParams }: { searchParams:
       </form>
       <div className="space-y-3">
         {items.map((item) => (
-          <form key={item.id} action={updateGalleryAsset} className="grid gap-3 rounded-lg border bg-white p-4 md:grid-cols-4">
+          <div key={item.id} className="rounded-lg border bg-white p-4">
+          <form action={updateGalleryAsset} className="grid gap-3 md:grid-cols-4">
             <input type="hidden" name="id" value={item.id} />
             <div className="md:col-span-4">
               <p className="font-semibold">{item.title}</p>
@@ -50,12 +52,10 @@ export default async function GalleryAdminPage({ searchParams }: { searchParams:
             <Input name="displayOrder" type="number" min={0} defaultValue={item.displayOrder} aria-label={`Order for ${item.title}`} />
             <Input name="consentNote" defaultValue={item.consentNote || ""} aria-label={`Consent note for ${item.title}`} placeholder="Consent note" />
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="consentRecorded" value="yes" defaultChecked={item.consentRecorded} /> Consent recorded</label>
-            <div className="flex flex-wrap gap-2 md:col-span-4">
-              <Button type="submit" size="sm">Save</Button>
-              <Button formAction={deleteGalleryAsset} size="sm" variant="outline" type="submit">Delete</Button>
-              <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="confirm" value="yes" /> Confirm delete</label>
-            </div>
+            <div className="md:col-span-4"><Button type="submit" size="sm">Save</Button></div>
           </form>
+          <div className="mt-3"><ConfirmDeleteButton action={deleteGalleryAsset} id={item.id} name={item.title} description="This photograph is removed from the gallery." /></div>
+          </div>
         ))}
         {items.length === 0 ? <p className="rounded-lg border border-dashed p-5 text-sm text-muted-foreground">No photographs yet.</p> : null}
       </div>

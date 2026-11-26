@@ -6,6 +6,8 @@ import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/permissions";
 import { formatDuration, money, shortDateTime } from "@/lib/format";
 import { StatusBadge } from "@/lib/status";
+import { deleteService } from "../../actions";
+import { ConfirmDeleteButton } from "@/components/admin/confirm-delete-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -27,12 +29,15 @@ export default async function ViewServicePage({ params }: { params: Promise<{ id
             Back to services
           </Link>
         </Button>
-        <Button asChild>
-          <Link href={`/admin/settings/services/${service.id}/edit`}>
-            <Pencil className="h-4 w-4" />
-            Edit service
-          </Link>
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button asChild>
+            <Link href={`/admin/settings/services/${service.id}/edit`}>
+              <Pencil className="h-4 w-4" />
+              Edit service
+            </Link>
+          </Button>
+          <ConfirmDeleteButton action={deleteService} id={service.id} name={service.name} label="Remove" description="This takes the service off the website and the booking list. Past appointments stay on record." />
+        </div>
       </div>
 
       <Card>

@@ -36,7 +36,7 @@ export function BankAccountSelector({ accounts }: { accounts: BankAccountOption[
           <option value="">Select bank account</option>
           {accounts.map((account) => (
             <option key={account.id} value={account.id}>
-              {account.bankName} - {account.accountNumber}
+              {account.bankName} — {account.accountName} — {account.accountNumber}
             </option>
           ))}
         </Select>

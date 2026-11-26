@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/permissions";
 import { encryptSecret } from "@/lib/secret";
 import { sendSmsTest } from "@/lib/sms";
+import { failForm } from "@/lib/form-feedback";
 
 const settingsPath = "/admin/settings/sms";
 
@@ -15,9 +16,9 @@ export async function saveSmsSettings(formData: FormData) {
   const senderName = String(formData.get("senderName") || "").trim();
   const existing = await prisma.smsSetting.findUnique({ where: { id: "primary" } });
 
-  if (!existing && !token) throw new Error("API token is required the first time you save SMS settings");
-  if (!identifierId) throw new Error("Identifier ID is required");
-  if (!senderName) throw new Error("Sender name is required");
+  if (!existing && !token) return failForm("The AfroMessage API key is required the first time you save SMS settings", "apiToken");
+  if (!identifierId) return failForm("The AfroMessage account id is required", "identifierId");
+  if (!senderName) return failForm("Sender name is required");
 
   await prisma.smsSetting.upsert({
     where: { id: "primary" },

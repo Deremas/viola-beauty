@@ -1,7 +1,14 @@
 import { prisma } from "@/lib/prisma";
+import { isDbError } from "@/lib/db-errors";
 
 export async function GET(request: Request) {
-  const document = await prisma.precautionDocument.findFirst({ where: { isActive: true }, orderBy: { activatedAt: "desc" } });
+  let document;
+  try {
+    document = await prisma.precautionDocument.findFirst({ where: { isActive: true }, orderBy: { activatedAt: "desc" } });
+  } catch (error) {
+    if (isDbError(error)) return new Response("Unavailable", { status: 503, headers: { "Cache-Control": "no-store" } });
+    throw error;
+  }
   if (!document) return Response.json({ error: "Precaution document is not available" }, { status: 404 });
   const download = new URL(request.url).searchParams.get("download") === "1";
   const safeName = document.fileName.replace(/[\r\n"\\]/g, "_");

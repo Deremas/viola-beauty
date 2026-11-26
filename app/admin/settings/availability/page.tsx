@@ -1,7 +1,7 @@
-import { Trash2 } from "lucide-react";
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/permissions";
-import { applyWorkingHoursToDays, createBreakTime, deleteBreakTime, saveBookingSlotInterval, saveWeeklyWorkingHours, updateBreakTime } from "../actions";
+import { applyWorkingHoursToDays, saveBookingSlotInterval, saveWeeklyWorkingHours } from "../actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,15 +12,14 @@ const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Frida
 
 export default async function AvailabilityPage() {
   await requirePermission("MANAGE_AVAILABILITY");
-  const [hours, breaks, bookingSettings] = await Promise.all([
+  const [hours, bookingSettings] = await Promise.all([
     prisma.workingHour.findMany(),
-    prisma.breakTime.findMany({ orderBy: [{ dayOfWeek: "asc" }, { startTime: "asc" }] }),
     prisma.bookingSetting.findUnique({ where: { id: "primary" } }),
   ]);
   const timeStepSeconds = (bookingSettings?.slotIntervalMinutes === 30 ? 30 : 60) * 60;
 
   return <div className="space-y-6">
-    <div><h1 className="font-display text-3xl font-bold">Availability</h1><p className="text-sm text-muted-foreground">Set the normal weekly schedule and recurring breaks used to calculate client booking times.</p></div>
+    <div><h1 className="font-display text-3xl font-bold">Availability</h1><p className="text-sm text-muted-foreground">Set the studio&apos;s weekly opening hours. Days off, part-day blocks, and weekly breaks are on <Link href="/admin/settings/days-off" className="font-semibold text-primary">Days off</Link>.</p></div>
 
     <Card><CardHeader><CardTitle>Appointment start times</CardTitle></CardHeader><CardContent>
       <form action={saveBookingSlotInterval} className="flex flex-wrap items-end justify-between gap-4">
@@ -48,21 +47,5 @@ export default async function AvailabilityPage() {
         <div className="flex justify-end pt-2"><Button type="submit">Save full weekly schedule</Button></div>
       </form>
     </CardContent></Card>
-
-    <div className="grid gap-6 xl:grid-cols-[0.7fr_1fr]">
-      <Card><CardHeader><CardTitle>Add recurring break</CardTitle></CardHeader><CardContent><form action={createBreakTime} className="grid gap-4">
-        <div><Label className="mb-2 block">Day</Label><Select name="dayOfWeek">{dayNames.map((day, index) => <option key={day} value={index}>{day}</option>)}</Select></div>
-        <div className="grid gap-3 sm:grid-cols-2"><div><Label className="mb-2 block">Break starts</Label><Input name="startTime" type="time" step={timeStepSeconds} required /></div><div><Label className="mb-2 block">Break ends</Label><Input name="endTime" type="time" step={timeStepSeconds} required /></div></div>
-        <Label className="flex items-center gap-2"><input name="isActive" type="checkbox" defaultChecked />Block client booking times during this break</Label>
-        <div className="flex justify-end"><Button type="submit">Add recurring break</Button></div>
-      </form></CardContent></Card>
-
-      <Card><CardHeader><CardTitle>Recurring breaks</CardTitle></CardHeader><CardContent className="space-y-3">
-        {breaks.length === 0 ? <p className="text-sm text-muted-foreground">No recurring breaks configured.</p> : null}
-        {breaks.map((breakTime) => <form key={breakTime.id} action={updateBreakTime} className="grid items-end gap-3 rounded-md border bg-white p-3 sm:grid-cols-[1fr_1fr_1fr_auto_auto]">
-          <input type="hidden" name="id" value={breakTime.id} /><Select name="dayOfWeek" defaultValue={breakTime.dayOfWeek}>{dayNames.map((day, index) => <option key={day} value={index}>{day}</option>)}</Select><Input name="startTime" type="time" step={timeStepSeconds} defaultValue={breakTime.startTime} /><Input name="endTime" type="time" step={timeStepSeconds} defaultValue={breakTime.endTime} /><Label className="flex items-center gap-2 pb-2"><input name="isActive" type="checkbox" defaultChecked={breakTime.isActive} />Active</Label><div className="flex gap-2"><Button type="submit" variant="outline">Save break</Button><Button formAction={deleteBreakTime} type="submit" variant="destructive" size="icon" title="Delete break"><Trash2 className="h-4 w-4" /><span className="sr-only">Delete break</span></Button></div>
-        </form>)}
-      </CardContent></Card>
-    </div>
   </div>;
 }

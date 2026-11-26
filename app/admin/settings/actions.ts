@@ -9,6 +9,7 @@ import { serviceSchema } from "@/lib/validators/booking";
 import { permissionValues } from "@/lib/permission-catalog";
 import { prepareServiceImage } from "@/lib/service-image";
 import { getBookingSlotInterval } from "@/lib/booking-settings";
+import { failForm, parseForm } from "@/lib/form-feedback";
 
 function serviceDurationFromForm(formData: FormData) {
   return Number(formData.get("durationHours") || 0) * 60
@@ -17,7 +18,7 @@ function serviceDurationFromForm(formData: FormData) {
 
 export async function createService(formData: FormData) {
   await requirePermission("MANAGE_SERVICES");
-  const data = serviceSchema.parse({
+  const data = await parseForm(serviceSchema, {
     name: formData.get("name"),
     category: formData.get("category"),
     description: formData.get("description"),
@@ -50,7 +51,7 @@ export async function createServiceAndRedirect(formData: FormData) {
 export async function updateService(formData: FormData) {
   await requirePermission("MANAGE_SERVICES");
   const id = String(formData.get("id"));
-  const data = serviceSchema.parse({
+  const data = await parseForm(serviceSchema, {
     name: formData.get("name"),
     category: formData.get("category"),
     description: formData.get("description"),
@@ -86,6 +87,7 @@ export async function updateService(formData: FormData) {
 
 export async function removeServiceImage(formData: FormData) {
   await requirePermission("MANAGE_SERVICES");
+  if (formData.get("confirm") !== "yes") return failForm("Confirm the removal first");
   const serviceId = String(formData.get("id"));
   await prisma.serviceImage.deleteMany({ where: { serviceId } });
   revalidatePath(`/admin/settings/services/${serviceId}/edit`);
@@ -99,7 +101,7 @@ export async function saveBookingSlotInterval(formData: FormData) {
   await requirePermission("MANAGE_AVAILABILITY");
   const requested = Number(formData.get("slotIntervalMinutes"));
   if (requested !== 30 && requested !== 60) {
-    throw new Error("Choose hourly or half-hour appointment starts");
+    return failForm("Choose hourly or half-hour appointment starts");
   }
   await prisma.bookingSetting.upsert({
     where: { id: "primary" },
@@ -228,6 +230,7 @@ export async function setBankAccountActive(formData: FormData) {
 
 export async function archiveBankAccount(formData: FormData) {
   await requirePermission("MANAGE_BANK_ACCOUNTS");
+  if (formData.get("confirm") !== "yes") return failForm("Confirm the removal first");
   await prisma.bankAccount.update({
     where: { id: String(formData.get("id")), deletedAt: null },
     data: { isActive: false, deletedAt: new Date() },
@@ -265,15 +268,15 @@ export async function upsertWorkingHour(formData: FormData) {
   revalidatePath("/admin/settings/availability");
 }
 
-function validateWorkingHours(openingTime: string, closingTime: string) {
-  if (!/^\d{2}:\d{2}$/.test(openingTime) || !/^\d{2}:\d{2}$/.test(closingTime)) throw new Error("Enter valid working hours");
-  if (openingTime >= closingTime) throw new Error("Closing time must be after opening time");
+async function validateWorkingHours(openingTime: string, closingTime: string) {
+  if (!/^\d{2}:\d{2}$/.test(openingTime) || !/^\d{2}:\d{2}$/.test(closingTime)) await failForm("Enter valid working hours", "startTime");
+  if (openingTime >= closingTime) await failForm("Closing time must be after opening time", "startTime");
 }
 
-function validateTimeAlignment(time: string, interval: number) {
+async function validateTimeAlignment(time: string, interval: number) {
   const minutes = Number(time.split(":")[1]);
   if (!Number.isInteger(minutes) || minutes % interval !== 0) {
-    throw new Error(interval === 60 ? "Choose a whole-hour time" : "Choose a whole-hour or half-hour time");
+    await failForm(interval === 60 ? "Choose a whole-hour time" : "Choose a whole-hour or half-hour time", "startTime");
   }
 }
 
@@ -286,11 +289,11 @@ export async function saveWeeklyWorkingHours(formData: FormData) {
     closingTime: String(formData.get(`closingTime_${dayOfWeek}`) || "18:00"),
     isOpen: formData.get(`isOpen_${dayOfWeek}`) === "on",
   }));
-  rows.filter((row) => row.isOpen).forEach((row) => {
-    validateWorkingHours(row.openingTime, row.closingTime);
-    validateTimeAlignment(row.openingTime, interval);
-    validateTimeAlignment(row.closingTime, interval);
-  });
+  for (const row of rows.filter((item) => item.isOpen)) {
+    await validateWorkingHours(row.openingTime, row.closingTime);
+    await validateTimeAlignment(row.openingTime, interval);
+    await validateTimeAlignment(row.closingTime, interval);
+  }
   await prisma.$transaction(rows.map((row) => prisma.workingHour.upsert({
     where: { dayOfWeek: row.dayOfWeek },
     update: row,
@@ -309,11 +312,11 @@ export async function applyWorkingHoursToDays(formData: FormData) {
   const openingTime = String(formData.get("openingTime"));
   const closingTime = String(formData.get("closingTime"));
   const isOpen = formData.get("isOpen") === "on";
-  if (days.length === 0) throw new Error("Choose at least one day");
+  if (days.length === 0) return failForm("Choose at least one day");
   if (isOpen) {
-    validateWorkingHours(openingTime, closingTime);
-    validateTimeAlignment(openingTime, interval);
-    validateTimeAlignment(closingTime, interval);
+    await validateWorkingHours(openingTime, closingTime);
+    await validateTimeAlignment(openingTime, interval);
+    await validateTimeAlignment(closingTime, interval);
   }
   await prisma.$transaction(days.map((dayOfWeek) => prisma.workingHour.upsert({
     where: { dayOfWeek },
@@ -326,111 +329,114 @@ export async function applyWorkingHoursToDays(formData: FormData) {
   revalidatePath("/contact");
 }
 
+async function blockTimes(formData: FormData) {
+  const startTime = String(formData.get("startTime") || "").trim();
+  const endTime = String(formData.get("endTime") || "").trim();
+  if (!startTime || !endTime) await failForm("Choose a start and end time", "startTime");
+  if (startTime >= endTime) await failForm("Start must be before end", "startTime");
+  return { startTime, endTime };
+}
+
+function revalidateBlocks() {
+  revalidatePath("/admin/settings/availability");
+  revalidatePath("/admin/settings/days-off");
+  revalidatePath("/book");
+}
+
 export async function createBreakTime(formData: FormData) {
   await requirePermission("MANAGE_AVAILABILITY");
   const interval = await getBookingSlotInterval();
-  validateTimeAlignment(String(formData.get("startTime")), interval);
-  validateTimeAlignment(String(formData.get("endTime")), interval);
+  const { startTime, endTime } = await blockTimes(formData);
+  await validateTimeAlignment(startTime, interval);
+  await validateTimeAlignment(endTime, interval);
+  const dayOfWeek = Number(formData.get("dayOfWeek"));
+  if (!Number.isInteger(dayOfWeek) || dayOfWeek < 0 || dayOfWeek > 6) return failForm("Choose a weekday");
   await prisma.breakTime.create({
     data: {
-      dayOfWeek: Number(formData.get("dayOfWeek")),
-      startTime: String(formData.get("startTime")),
-      endTime: String(formData.get("endTime")),
+      dayOfWeek,
+      startTime,
+      endTime,
       isActive: formData.get("isActive") === "on",
     },
   });
-  revalidatePath("/admin/settings/availability");
+  revalidateBlocks();
 }
 
 export async function updateBreakTime(formData: FormData) {
   await requirePermission("MANAGE_AVAILABILITY");
   const interval = await getBookingSlotInterval();
-  validateTimeAlignment(String(formData.get("startTime")), interval);
-  validateTimeAlignment(String(formData.get("endTime")), interval);
+  const { startTime, endTime } = await blockTimes(formData);
+  await validateTimeAlignment(startTime, interval);
+  await validateTimeAlignment(endTime, interval);
   const id = String(formData.get("id"));
+  const dayOfWeek = Number(formData.get("dayOfWeek"));
+  if (!Number.isInteger(dayOfWeek) || dayOfWeek < 0 || dayOfWeek > 6) return failForm("Choose a weekday");
   await prisma.breakTime.update({
     where: { id },
     data: {
-      dayOfWeek: Number(formData.get("dayOfWeek")),
-      startTime: String(formData.get("startTime")),
-      endTime: String(formData.get("endTime")),
+      dayOfWeek,
+      startTime,
+      endTime,
       isActive: formData.get("isActive") === "on",
     },
   });
-  revalidatePath("/admin/settings/availability");
+  revalidateBlocks();
 }
 
 export async function deleteBreakTime(formData: FormData) {
   await requirePermission("MANAGE_AVAILABILITY");
+  if (String(formData.get("confirm")) !== "yes") return failForm("Confirm the removal first");
   await prisma.breakTime.delete({ where: { id: String(formData.get("id")) } });
-  revalidatePath("/admin/settings/availability");
-  revalidatePath("/book");
+  revalidateBlocks();
+}
+
+async function dayOffInput(formData: FormData, interval: number) {
+  const blockKind = String(formData.get("blockKind") || "");
+  const isFullDay = blockKind ? blockKind !== "partial" : formData.get("isFullDay") === "on";
+  const title = String(formData.get("title") || "").trim();
+  const date = String(formData.get("date") || "").trim();
+  if (!title) await failForm("Public title is required", "title");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) await failForm("Choose a date", "date");
+  if (isFullDay) {
+    return { title, date: new Date(`${date}T00:00:00.000Z`), startTime: null, endTime: null, isFullDay, note: String(formData.get("note") || "").trim() || null };
+  }
+  const { startTime, endTime } = await blockTimes(formData);
+  await validateTimeAlignment(startTime, interval);
+  await validateTimeAlignment(endTime, interval);
+  return { title, date: new Date(`${date}T00:00:00.000Z`), startTime, endTime, isFullDay, note: String(formData.get("note") || "").trim() || null };
 }
 
 export async function createDayOff(formData: FormData) {
   await requirePermission("MANAGE_AVAILABILITY");
   const interval = await getBookingSlotInterval();
-  const isFullDay = formData.get("isFullDay") === "on";
-  const startTime = String(formData.get("startTime") || "") || null;
-  const endTime = String(formData.get("endTime") || "") || null;
-  if (!isFullDay && (!startTime || !endTime || startTime >= endTime)) throw new Error("Choose a valid start and end time for a partial day off");
-  if (!isFullDay) {
-    validateTimeAlignment(startTime!, interval);
-    validateTimeAlignment(endTime!, interval);
-  }
-  await prisma.dayOff.create({
-    data: {
-      title: String(formData.get("title")),
-      date: new Date(String(formData.get("date"))),
-      startTime: isFullDay ? null : startTime,
-      endTime: isFullDay ? null : endTime,
-      isFullDay,
-      note: String(formData.get("note") || "") || null,
-    },
-  });
-  revalidatePath("/admin/settings/days-off");
+  await prisma.dayOff.create({ data: await dayOffInput(formData, interval) });
+  revalidateBlocks();
 }
 
 export async function updateDayOff(formData: FormData) {
   await requirePermission("MANAGE_AVAILABILITY");
   const interval = await getBookingSlotInterval();
   const id = String(formData.get("id"));
-  const isFullDay = formData.get("isFullDay") === "on";
-  const startTime = String(formData.get("startTime") || "") || null;
-  const endTime = String(formData.get("endTime") || "") || null;
-  if (!isFullDay && (!startTime || !endTime || startTime >= endTime)) throw new Error("Choose a valid start and end time for a partial day off");
-  if (!isFullDay) {
-    validateTimeAlignment(startTime!, interval);
-    validateTimeAlignment(endTime!, interval);
-  }
-  await prisma.dayOff.update({ where: { id }, data: {
-    title: String(formData.get("title")).trim(),
-    date: new Date(String(formData.get("date"))),
-    startTime: isFullDay ? null : startTime,
-    endTime: isFullDay ? null : endTime,
-    isFullDay,
-    note: String(formData.get("note") || "").trim() || null,
-  } });
-  revalidatePath("/admin/settings/days-off");
-  revalidatePath("/book");
+  await prisma.dayOff.update({ where: { id }, data: await dayOffInput(formData, interval) });
+  revalidateBlocks();
 }
 
 export async function deleteDayOff(formData: FormData) {
   await requirePermission("MANAGE_AVAILABILITY");
+  if (String(formData.get("confirm")) !== "yes") return failForm("Confirm the removal first");
   await prisma.dayOff.delete({ where: { id: String(formData.get("id")) } });
-  revalidatePath("/admin/settings/days-off");
-  revalidatePath("/book");
+  revalidateBlocks();
 }
 
 export async function createUser(formData: FormData) {
   const manager = await requirePermission("MANAGE_STAFF");
   const passwordHash = await bcrypt.hash(String(formData.get("password")), 10);
   const accountType = String(formData.get("accountType")) === "ADMIN" ? "ADMIN" : "RECEPTIONIST";
-  if (accountType === "ADMIN" && manager.role !== "ADMIN") throw new Error("Only an administrator can create another administrator");
+  if (accountType === "ADMIN" && manager.role !== "ADMIN") return failForm("Only an administrator can create another administrator");
   const staffRoleId = accountType === "ADMIN" ? null : String(formData.get("staffRoleId") || "") || null;
   if (staffRoleId) {
     const staffRole = await prisma.staffRole.findFirst({ where: { id: staffRoleId, isActive: true, deletedAt: null } });
-    if (!staffRole) throw new Error("Choose an active staff role");
+    if (!staffRole) return failForm("Choose an active staff role");
   }
   await prisma.user.create({
     data: {
@@ -464,14 +470,14 @@ export async function updateUser(formData: FormData) {
   const staffRoleId = accountType === "ADMIN" ? null : String(formData.get("staffRoleId") || "") || null;
   const password = String(formData.get("password") || "");
   const target = await prisma.user.findFirst({ where: { id, deletedAt: null }, select: { role: true } });
-  if (!target) throw new Error("Staff user not found");
-  if (admin.role !== "ADMIN" && (target.role === "ADMIN" || accountType === "ADMIN")) throw new Error("Only an administrator can manage administrator accounts");
+  if (!target) return failForm("Staff user not found");
+  if (admin.role !== "ADMIN" && (target.role === "ADMIN" || accountType === "ADMIN")) return failForm("Only an administrator can manage administrator accounts");
   if (admin.id === id && (accountType !== "ADMIN" || formData.get("isActive") !== "on")) {
-    throw new Error("You cannot remove your own administrator access or deactivate your own account");
+    return failForm("You cannot remove your own administrator access or deactivate your own account");
   }
   if (staffRoleId) {
     const staffRole = await prisma.staffRole.findFirst({ where: { id: staffRoleId, isActive: true, deletedAt: null } });
-    if (!staffRole) throw new Error("Choose an active staff role");
+    if (!staffRole) return failForm("Choose an active staff role");
   }
   await prisma.user.update({
     where: { id, deletedAt: null },
@@ -499,18 +505,19 @@ export async function setUserActive(formData: FormData) {
   const id = String(formData.get("id"));
   const isActive = String(formData.get("isActive")) === "true";
   const target = await prisma.user.findFirst({ where: { id, deletedAt: null }, select: { role: true } });
-  if (admin.role !== "ADMIN" && target?.role === "ADMIN") throw new Error("Only an administrator can manage administrator accounts");
-  if (admin.id === id && !isActive) throw new Error("You cannot deactivate your own account");
+  if (admin.role !== "ADMIN" && target?.role === "ADMIN") return failForm("Only an administrator can manage administrator accounts");
+  if (admin.id === id && !isActive) return failForm("You cannot deactivate your own account");
   await prisma.user.update({ where: { id, deletedAt: null }, data: { isActive } });
   revalidatePath("/admin/settings/users");
 }
 
 export async function archiveUser(formData: FormData) {
   const admin = await requirePermission("MANAGE_STAFF");
+  if (formData.get("confirm") !== "yes") return failForm("Confirm the removal first");
   const id = String(formData.get("id"));
   const target = await prisma.user.findFirst({ where: { id, deletedAt: null }, select: { role: true } });
-  if (admin.role !== "ADMIN" && target?.role === "ADMIN") throw new Error("Only an administrator can manage administrator accounts");
-  if (admin.id === id) throw new Error("You cannot archive your own account");
+  if (admin.role !== "ADMIN" && target?.role === "ADMIN") return failForm("Only an administrator can manage administrator accounts");
+  if (admin.id === id) return failForm("You cannot archive your own account");
   await prisma.user.update({ where: { id, deletedAt: null }, data: { isActive: false, deletedAt: new Date() } });
   revalidatePath("/admin/settings/users");
 }
@@ -529,7 +536,7 @@ function selectedPermissions(formData: FormData) {
 export async function createStaffRole(formData: FormData) {
   await requirePermission("MANAGE_ROLES");
   const permissions = selectedPermissions(formData);
-  if (permissions.length === 0) throw new Error("Choose at least one permission");
+  if (permissions.length === 0) return failForm("Choose at least one permission");
   await prisma.staffRole.create({
     data: {
       name: String(formData.get("name")).trim(),
@@ -550,7 +557,7 @@ export async function updateStaffRole(formData: FormData) {
   await requirePermission("MANAGE_ROLES");
   const id = String(formData.get("id"));
   const permissions = selectedPermissions(formData);
-  if (permissions.length === 0) throw new Error("Choose at least one permission");
+  if (permissions.length === 0) return failForm("Choose at least one permission");
   await prisma.$transaction(async (tx) => {
     await tx.staffRole.update({
       where: { id, deletedAt: null },
@@ -582,9 +589,10 @@ export async function setStaffRoleActive(formData: FormData) {
 
 export async function archiveStaffRole(formData: FormData) {
   await requirePermission("MANAGE_ROLES");
+  if (formData.get("confirm") !== "yes") return failForm("Confirm the removal first");
   const id = String(formData.get("id"));
   const assignedUsers = await prisma.user.count({ where: { staffRoleId: id, deletedAt: null } });
-  if (assignedUsers > 0) throw new Error("Reassign or archive staff using this role first");
+  if (assignedUsers > 0) return failForm("Reassign or archive staff using this role first");
   await prisma.staffRole.update({ where: { id, deletedAt: null }, data: { isActive: false, deletedAt: new Date() } });
   revalidatePath("/admin/settings/roles");
 }

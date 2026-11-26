@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { courseHeroPhoto, courseStudioPhoto } from "@/lib/courses/photos";
 import { Button } from "@/components/ui/button";
 
@@ -146,18 +146,6 @@ export function HeroCarousel({ title, text }: { title: string; text: string }) {
             </article>
           );
         })}
-      </div>
-      <div className="absolute inset-x-0 bottom-0 z-20">
-        <div className="mx-auto flex max-w-7xl items-center justify-end gap-3 px-4 py-6 sm:px-6">
-          <div className="flex shrink-0 gap-2">
-            <button type="button" aria-label="Previous card" onClick={() => go(-1)} className="flex h-11 w-11 items-center justify-center rounded-full border border-white/30 bg-black/20 text-white backdrop-blur-sm hover:bg-white/15">
-              <ChevronLeft className="h-5 w-5" />
-            </button>
-            <button type="button" aria-label="Next card" onClick={() => go(1)} className="flex h-11 w-11 items-center justify-center rounded-full border border-white/30 bg-black/20 text-white backdrop-blur-sm hover:bg-white/15">
-              <ChevronRight className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
       </div>
     </section>
   );

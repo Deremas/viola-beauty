@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { Eye, Pencil, Power, PowerOff, Trash2 } from "lucide-react";
+import { Eye, Pencil, Power, PowerOff } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/permissions";
 import { shortDateTime } from "@/lib/format";
 import { StatusBadge } from "@/lib/status";
 import { setClientActive, deleteClient } from "./actions";
+import { ConfirmDeleteButton } from "@/components/admin/confirm-delete-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, Td, Th } from "@/components/ui/table";
@@ -75,12 +76,13 @@ export default async function ClientsPage() {
                             {client.isActive ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4" />}
                           </Button>
                         </form>
-                        <form action={deleteClient}>
-                          <input type="hidden" name="id" value={client.id} />
-                          <Button variant="destructive" size="icon" type="submit" title="Delete client" aria-label={`Delete ${client.fullName}`}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </form>
+                        <ConfirmDeleteButton
+                          action={deleteClient}
+                          id={client.id}
+                          name={client.fullName}
+                          allow={client._count.bookings === 0}
+                          description={client._count.bookings > 0 ? `${client.fullName} still has appointments, so this profile stays.` : "This removes the customer profile. It cannot be restored."}
+                        />
                       </div>
                     </Td>
                   </tr>

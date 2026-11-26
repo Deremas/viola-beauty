@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/permissions";
 import { deleteFaq, saveFaq, updateFaq } from "../content-actions";
+import { ConfirmDeleteButton } from "@/components/admin/confirm-delete-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -32,7 +33,8 @@ export default async function FaqsAdminPage({ searchParams }: { searchParams: Pr
       </form>
       <div className="space-y-3">
         {items.map((item) => (
-          <form key={item.id} action={updateFaq} className="grid gap-3 rounded-lg border bg-white p-4">
+          <div key={item.id} className="rounded-lg border bg-white p-4">
+          <form action={updateFaq} className="grid gap-3">
             <input type="hidden" name="id" value={item.id} />
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{item.scope}</p>
             <Input name="question" defaultValue={item.question} aria-label="Question" />
@@ -41,12 +43,10 @@ export default async function FaqsAdminPage({ searchParams }: { searchParams: Pr
               <Input name="displayOrder" type="number" min={0} defaultValue={item.displayOrder} aria-label="Display order" />
               <Select name="publicationStatus" defaultValue={item.publicationStatus} aria-label="Publication"><option>DRAFT</option><option>PUBLISHED</option><option>ARCHIVED</option></Select>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Button type="submit" size="sm">Save</Button>
-              <Button formAction={deleteFaq} size="sm" variant="outline" type="submit">Delete</Button>
-              <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="confirm" value="yes" /> Confirm delete</label>
-            </div>
+            <Button type="submit" size="sm">Save</Button>
           </form>
+          <div className="mt-3"><ConfirmDeleteButton action={deleteFaq} id={item.id} name={item.question} description="This question is removed from the website." /></div>
+          </div>
         ))}
       </div>
     </div>

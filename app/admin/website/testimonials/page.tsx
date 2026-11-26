@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/permissions";
 import { deleteTestimonial, saveTestimonial, updateTestimonial } from "../content-actions";
+import { ConfirmDeleteButton } from "@/components/admin/confirm-delete-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -34,7 +35,8 @@ export default async function TestimonialsAdminPage({ searchParams }: { searchPa
       </form>
       <div className="space-y-3">
         {items.map((item) => (
-          <form key={item.id} action={updateTestimonial} className="space-y-3 rounded-lg border bg-white p-4">
+          <div key={item.id} className="space-y-3 rounded-lg border bg-white p-4">
+          <form action={updateTestimonial} className="space-y-3">
             <input type="hidden" name="id" value={item.id} />
             <p className="text-sm font-semibold">{item.kind} · {item.authorName}</p>
             {item.quote ? <p className="text-sm leading-6">{item.quote}</p> : null}
@@ -43,12 +45,10 @@ export default async function TestimonialsAdminPage({ searchParams }: { searchPa
               <Input name="displayOrder" type="number" min={0} defaultValue={item.displayOrder} aria-label={`Order for ${item.authorName}`} />
               <Input name="consentNote" defaultValue={item.consentNote || ""} aria-label={`Consent for ${item.authorName}`} placeholder="Consent note" />
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Button type="submit" size="sm">Save</Button>
-              <Button formAction={deleteTestimonial} size="sm" variant="outline" type="submit">Delete</Button>
-              <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="confirm" value="yes" /> Confirm delete</label>
-            </div>
+            <Button type="submit" size="sm">Save</Button>
           </form>
+          <ConfirmDeleteButton action={deleteTestimonial} id={item.id} name={item.authorName} description="This note is removed from the website." />
+          </div>
         ))}
         {items.length === 0 ? <p className="rounded-lg border border-dashed p-5 text-sm text-muted-foreground">No testimonials yet.</p> : null}
       </div>

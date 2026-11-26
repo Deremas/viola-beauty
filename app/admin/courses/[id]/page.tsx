@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/permissions";
 import { addModule, addTopic, deleteModule, deleteTopic, moveModule, saveCourse } from "./actions";
+import { ConfirmDeleteButton } from "@/components/admin/confirm-delete-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -48,7 +49,7 @@ export default async function EditCoursePage({ params, searchParams }: { params:
               {module.topics.map((topic) => (
                 <li key={topic.id} className="flex items-center justify-between gap-3">
                   <span>{topic.displayOrder}. {topic.title}</span>
-                  <form action={deleteTopic}><input type="hidden" name="courseId" value={course.id} /><input type="hidden" name="moduleId" value={module.id} /><input type="hidden" name="id" value={topic.id} /><Button type="submit" size="sm" variant="ghost">Remove</Button></form>
+                  <ConfirmDeleteButton action={deleteTopic} id={topic.id} name={topic.title} label="Remove" fields={{ courseId: course.id, moduleId: module.id }} description="This topic is removed from the module." />
                 </li>
               ))}
             </ul>
@@ -58,12 +59,9 @@ export default async function EditCoursePage({ params, searchParams }: { params:
               <Input name="title" placeholder="New topic" aria-label={`Topic for ${module.title}`} className="max-w-sm" />
               <Button type="submit" size="sm" variant="outline">Add topic</Button>
             </form>
-            <form action={deleteModule} className="mt-3 flex items-center gap-2">
-              <input type="hidden" name="courseId" value={course.id} />
-              <input type="hidden" name="id" value={module.id} />
-              <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="confirm" value="yes" /> Confirm delete</label>
-              <Button type="submit" size="sm" variant="outline">Delete module</Button>
-            </form>
+            <div className="mt-3">
+              <ConfirmDeleteButton action={deleteModule} id={module.id} name={module.title} label="Remove" fields={{ courseId: course.id }} description="This module and its topics are removed from the course." />
+            </div>
           </div>
         ))}
         <form action={addModule} className="grid gap-3 border-t pt-4 md:grid-cols-2">

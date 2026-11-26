@@ -167,21 +167,31 @@ export async function getSlotAvailability(serviceId: string, date: string) {
 export async function getPublicAvailabilityNotice(date: string) {
   const { day, dayEnd } = getStoredDateRange(date);
   const dayOfWeek = new Date(`${date}T12:00:00.000Z`).getUTCDay();
-  const [workingHour, fullDayOff, partialDayOff] = await Promise.all([
+  const [workingHour, fullDayOff, partialDaysOff] = await Promise.all([
     prisma.workingHour.findUnique({ where: { dayOfWeek } }),
     prisma.dayOff.findFirst({ where: { date: { gte: day, lt: dayEnd }, isFullDay: true }, orderBy: { createdAt: "desc" } }),
-    prisma.dayOff.findFirst({ where: { date: { gte: day, lt: dayEnd }, isFullDay: false }, orderBy: { createdAt: "desc" } }),
+    prisma.dayOff.findMany({ where: { date: { gte: day, lt: dayEnd }, isFullDay: false }, orderBy: { startTime: "asc" } }),
   ]);
 
   if (fullDayOff) return { type: "closed" as const, title: fullDayOff.title, message: "No appointments are available on this date." };
   if (!workingHour?.isOpen) return { type: "closed" as const, title: "Closed on this day", message: "Please choose another date." };
-  if (partialDayOff) return {
-    type: "limited" as const,
-    title: partialDayOff.title,
-    message: partialDayOff.startTime && partialDayOff.endTime
-      ? `Appointments are unavailable from ${partialDayOff.startTime} to ${partialDayOff.endTime}. Other available times are shown below.`
-      : "Only limited appointment times are available on this date.",
-  };
+  const partials = partialDaysOff.filter((dayOff) => dayOff.startTime && dayOff.endTime);
+  if (partials.length === 1) {
+    const partial = partials[0];
+    return {
+      type: "limited" as const,
+      title: partial.title,
+      message: `Appointments are unavailable from ${partial.startTime} to ${partial.endTime}. Other available times are shown below.`,
+    };
+  }
+  if (partials.length > 1) {
+    const ranges = partials.map((dayOff) => `${dayOff.startTime} to ${dayOff.endTime}`).join(", ");
+    return {
+      type: "limited" as const,
+      title: "Limited availability",
+      message: `Appointments are unavailable from ${ranges}. Other available times are shown below.`,
+    };
+  }
   return null;
 }
 

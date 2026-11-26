@@ -53,12 +53,13 @@ export default async function HomePage() {
             </div>
             <div>
               <p className="max-w-xl text-base leading-7 text-muted-foreground sm:text-lg sm:leading-8">{site.aboutText}</p>
-              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                 <Button asChild className="w-full sm:w-auto"><Link href="/book">Book a Service</Link></Button>
                 <Button asChild variant="outline" className="w-full sm:w-auto"><Link href="/courses">Explore Courses</Link></Button>
+                <Button asChild variant="outline" className="w-full sm:w-auto"><Link href="/about">About Viola</Link></Button>
               </div>
               <div className="mt-8 grid gap-3 sm:grid-cols-3 [&>*]:min-w-0">
-                <Fact icon={MapPin} label="Studio" value={site.addressLine} />
+                <Fact icon={MapPin} label="Studio" value={`${site.addressLine}, Addis Ababa`} />
                 <Fact icon={Clock} label="Working hours" value="Monday to Friday 09:00–18:00 · Saturday 09:00–17:00" />
                 <Fact icon={ShieldCheck} label="Bookings" value="Confirmed after we review your payment" />
               </div>
@@ -144,7 +145,7 @@ export default async function HomePage() {
           <div className="mt-8 grid gap-4 md:grid-cols-3">
             <Reveal className="h-full"><Reason icon={Sparkles} title="Professional Beauty Services" text="Enjoy a range of beauty treatments delivered with care, precision, and attention to detail." /></Reveal>
             <Reveal delay={90} className="h-full"><Reason icon={GraduationCap} title="Professional Beauty Training" text="Learn practical beauty skills and develop your expertise through hands-on training." /></Reveal>
-            <Reveal delay={180} className="h-full"><Reason icon={MapPin} title="Convenient Location in Addis Ababa" text="Visit us at CMC Safari, Fiyel Bet, Addis Ababa, Ethiopia." /></Reveal>
+            <Reveal delay={180} className="h-full"><Reason icon={MapPin} title="Fiyel Bet" text="Fiyel Bet, Addis Ababa" /></Reveal>
           </div>
         </section>
 

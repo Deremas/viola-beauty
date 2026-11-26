@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/permissions";
 import { formatDuration, money } from "@/lib/format";
 import { removeServiceImage, updateServiceAndRedirect } from "../../../actions";
+import { ConfirmDeleteButton } from "@/components/admin/confirm-delete-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -95,7 +96,7 @@ export default async function EditServicePage({ params }: { params: Promise<{ id
             </div>
             <div className="flex justify-end"><Button type="submit">Save service changes</Button></div>
           </form>
-          {service.image ? <form action={removeServiceImage} className="mt-3 flex justify-end"><input type="hidden" name="id" value={service.id} /><Button type="submit" variant="destructive">Remove service image</Button></form> : null}
+          {service.image ? <div className="mt-3 flex justify-end"><ConfirmDeleteButton action={removeServiceImage} id={service.id} name="the service photograph" label="Remove" description="The photograph is taken off this service. The service itself stays." /></div> : null}
         </CardContent>
       </Card>
     </div>

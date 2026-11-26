@@ -8,6 +8,7 @@ import { localDateTimeToUtc } from "@/lib/timezone";
 import { requirePermission } from "@/lib/permissions";
 import { savePaymentProof } from "@/lib/upload";
 import { sendTelegramBookingNotification } from "@/lib/telegram";
+import { failForm } from "@/lib/form-feedback";
 
 export async function createStaffBooking(formData: FormData) {
   const user = await requirePermission("CREATE_BOOKINGS");
@@ -20,15 +21,15 @@ export async function createStaffBooking(formData: FormData) {
   const bankAccountId = String(formData.get("bankAccountId") || "");
   const proofFile = formData.get("paymentProof");
   const service = await prisma.service.findFirst({ where: { id: serviceId, isActive: true, deletedAt: null } });
-  if (!service) throw new Error("Service not found");
-  if (!bankAccountId) throw new Error("Choose the bank account used for payment");
+  if (!service) return failForm("Service not found");
+  if (!bankAccountId) return failForm("Choose the bank account used for payment");
   const bankAccount = await prisma.bankAccount.findFirst({ where: { id: bankAccountId, isActive: true, deletedAt: null } });
-  if (!bankAccount) throw new Error("Selected bank account is not available");
-  if (!(proofFile instanceof File) || proofFile.size === 0) throw new Error("Payment proof is required");
-  if (!(["PROOF_UPLOADED", "ADVANCE_CONFIRMED"] as string[]).includes(paymentStatus)) throw new Error("Choose a valid payment review status");
+  if (!bankAccount) return failForm("Selected bank account is not available");
+  if (!(proofFile instanceof File) || proofFile.size === 0) return failForm("Payment proof is required");
+  if (!(["PROOF_UPLOADED", "ADVANCE_CONFIRMED"] as string[]).includes(paymentStatus)) return failForm("Choose a valid payment review status");
 
   const startDateTime = localDateTimeToUtc(date, time);
-  if (!(await isSlotAvailable(service.id, startDateTime))) throw new Error("Slot is unavailable");
+  if (!(await isSlotAvailable(service.id, startDateTime))) return failForm("Slot is unavailable");
   const bookingCode = makeBookingCode();
   const screenshotPath = await savePaymentProof(proofFile, bookingCode);
   const status = paymentStatus === "ADVANCE_CONFIRMED" ? "CONFIRMED" : "PAYMENT_UPLOADED";

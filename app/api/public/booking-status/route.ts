@@ -41,6 +41,7 @@ export async function POST(request: Request) {
   if (phone.length < 7) {
     return Response.json({ error: "Enter the phone number used during booking." }, { status: 400 });
   }
+  try {
   const hasFullPrecautions = Boolean(await prisma.precautionDocument.findFirst({
     where: { isActive: true },
     select: { id: true },
@@ -103,6 +104,9 @@ export async function POST(request: Request) {
   }
 
   return Response.json(publicBookingStatus(booking, hasFullPrecautions), { headers: { "Cache-Control": "no-store" } });
+  } catch (error) {
+    return apiError(error, "Booking status is temporarily unavailable. Please try again.");
+  }
 }
 
 function publicBookingStatus(booking: {

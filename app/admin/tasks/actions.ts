@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { StaffTaskPriority, StaffTaskStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/permissions";
+import { failForm } from "@/lib/form-feedback";
 
 function optionalString(value: FormDataEntryValue | null) {
   const text = String(value || "").trim();
@@ -54,6 +55,7 @@ export async function updateTaskStatus(formData: FormData) {
 
 export async function deleteTask(formData: FormData) {
   await requirePermission("MANAGE_TASKS");
+  if (formData.get("confirm") !== "yes") return failForm("Confirm the removal first");
   const id = String(formData.get("id"));
   await prisma.staffTask.delete({ where: { id } });
   revalidatePath("/admin/tasks");

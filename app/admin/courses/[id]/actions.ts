@@ -105,6 +105,7 @@ export async function addTopic(formData: FormData) {
 export async function deleteTopic(formData: FormData) {
   await requirePermission("MANAGE_COURSES");
   const courseId = String(formData.get("courseId") || "");
+  if (formData.get("confirm") !== "yes") courseBack(courseId, "Confirm before removing a topic.");
   const moduleId = String(formData.get("moduleId") || "");
   const id = String(formData.get("id") || "");
   const topic = await prisma.courseTopic.findFirst({ where: { id, moduleId, module: { courseId } } });

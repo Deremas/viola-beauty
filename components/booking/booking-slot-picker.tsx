@@ -109,7 +109,7 @@ export function BookingSlotPicker({ services, requirePrecautionAcknowledgement =
       <Card>
         <CardHeader>
           <CardTitle>Service</CardTitle>
-          <CardDescription>Active services are loaded from the database.</CardDescription>
+          <CardDescription>Choose the service for this visit.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <Select name="serviceId" required value={serviceId} onChange={(event) => chooseService(event.target.value)}>
@@ -139,14 +139,13 @@ export function BookingSlotPicker({ services, requirePrecautionAcknowledgement =
               ) : null}
             </div>
           ) : null}
-          {services.length === 0 ? <p className="text-sm text-muted-foreground">No active services yet. Add services in admin settings.</p> : null}
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
           <CardTitle>Date and Time</CardTitle>
-          <CardDescription>Only available slots are shown to clients.</CardDescription>
+          <CardDescription>Unavailable times are hidden.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
           <div className="space-y-2">
@@ -203,7 +202,7 @@ export function BookingSlotPicker({ services, requirePrecautionAcknowledgement =
               </div>
             ) : null}
 
-            <p className="text-xs text-muted-foreground">Unavailable slots are hidden because they are already booked, outside working hours, during breaks, or blocked by days off.</p>
+            <p className="text-xs text-muted-foreground">Unavailable times are hidden when the studio is closed, a block covers them, or they are already booked.</p>
           </div>
         </CardContent>
       </Card>

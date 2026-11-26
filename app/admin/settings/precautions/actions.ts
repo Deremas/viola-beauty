@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/permissions";
+import { failForm } from "@/lib/form-feedback";
 
 const maxPdfBytes = 15 * 1024 * 1024;
 
@@ -12,13 +13,13 @@ export async function uploadPrecautionDocument(formData: FormData) {
   const title = String(formData.get("title") || "Client Pre-Procedure Precautions").trim();
 
   if (!(file instanceof File) || file.size === 0) {
-    throw new Error("Choose a PDF before uploading. The current document was not changed");
+    return failForm("Choose a PDF before uploading. The current document was not changed");
   }
-  if (file.type !== "application/pdf") throw new Error("Only PDF documents are accepted");
-  if (file.size > maxPdfBytes) throw new Error("The PDF must be 15 MB or smaller");
+  if (file.type !== "application/pdf") return failForm("Only PDF documents are accepted");
+  if (file.size > maxPdfBytes) return failForm("The PDF must be 15 MB or smaller");
 
   const bytes = Buffer.from(await file.arrayBuffer());
-  if (bytes.subarray(0, 5).toString("ascii") !== "%PDF-") throw new Error("The selected file is not a valid PDF");
+  if (bytes.subarray(0, 5).toString("ascii") !== "%PDF-") return failForm("The selected file is not a valid PDF");
   const now = new Date();
 
   await prisma.$transaction(async (tx) => {
@@ -46,7 +47,7 @@ export async function activatePrecautionDocument(formData: FormData) {
   await requirePermission("MANAGE_SERVICES");
   const id = String(formData.get("id") || "");
   const document = await prisma.precautionDocument.findUnique({ where: { id }, select: { id: true } });
-  if (!document) throw new Error("Precaution document not found");
+  if (!document) return failForm("Precaution document not found");
   const now = new Date();
 
   await prisma.$transaction([

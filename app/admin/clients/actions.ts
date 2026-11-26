@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/permissions";
+import { failForm } from "@/lib/form-feedback";
 
 function optionalString(value: FormDataEntryValue | null) {
   const text = String(value || "").trim();
@@ -63,7 +64,10 @@ export async function setClientActive(formData: FormData) {
 
 export async function deleteClient(formData: FormData) {
   await requirePermission("MANAGE_CLIENTS");
+  if (formData.get("confirm") !== "yes") return failForm("Confirm the removal first");
   const id = String(formData.get("id"));
+  const bookings = await prisma.booking.count({ where: { clientId: id } });
+  if (bookings > 0) return failForm("This customer still has appointments, so the profile stays.");
 
   await prisma.client.delete({ where: { id } });
 

@@ -35,21 +35,24 @@ export default async function LoginPage({
             <p className="text-sm leading-6 text-muted-foreground">Use your Viola staff username and password to open the studio desk.</p>
           </CardHeader>
           <CardContent className="px-6 pb-8">
-            {query.error ? (
+            {query.error === "rate" || query.error === "unavailable" ? (
               <div className="mb-5 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm leading-6 text-destructive" role="alert">
                 {query.error === "rate"
                   ? `Too many sign-in attempts. Please wait ${retryMinutes} minute${retryMinutes === 1 ? "" : "s"} and try again.`
-                  : "The username or password is incorrect."}
+                  : "Staff sign-in cannot reach the studio records right now. Try again in a moment."}
               </div>
             ) : null}
             <form action={login} className="space-y-5">
               <div className="space-y-2">
                 <Label htmlFor="username">Username</Label>
-                <Input id="username" name="username" autoComplete="username" required />
+                <Input id="username" name="username" autoComplete="username" required aria-invalid={query.error === "credentials"} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
-                <PasswordInput id="password" name="password" autoComplete="current-password" required />
+                <PasswordInput id="password" name="password" autoComplete="current-password" required aria-invalid={query.error === "credentials"} />
+                {query.error === "credentials" ? (
+                  <p className="text-sm text-destructive" role="alert">The username or password is incorrect.</p>
+                ) : null}
               </div>
               <Button type="submit" className="h-11 w-full" pendingText="Signing in...">Sign in</Button>
             </form>
