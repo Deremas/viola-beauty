@@ -1,18 +1,28 @@
 import type { Metadata, Viewport } from "next";
-import { Cormorant_Garamond, Manrope } from "next/font/google";
+import localFont from "next/font/local";
 import { getSiteUrl, siteDescription, siteName } from "@/lib/seo";
 import "./globals.css";
 
-const display = Cormorant_Garamond({
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
+// Latin cuts of Cormorant Garamond and Manrope, stored in the repo.
+// next/font/google downloads Google's stylesheet during `next build`, and that
+// stylesheet now uses extensionless font URLs that crash Next.js 15.
+const display = localFont({
+  src: [
+    { path: "../fonts/cormorant-garamond-latin-500.woff2", weight: "500", style: "normal" },
+    { path: "../fonts/cormorant-garamond-latin-600.woff2", weight: "600", style: "normal" },
+    { path: "../fonts/cormorant-garamond-latin-700.woff2", weight: "700", style: "normal" },
+  ],
   variable: "--font-display",
   display: "swap",
 });
 
-const sans = Manrope({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+const sans = localFont({
+  src: [
+    { path: "../fonts/manrope-latin-400.woff2", weight: "400", style: "normal" },
+    { path: "../fonts/manrope-latin-500.woff2", weight: "500", style: "normal" },
+    { path: "../fonts/manrope-latin-600.woff2", weight: "600", style: "normal" },
+    { path: "../fonts/manrope-latin-700.woff2", weight: "700", style: "normal" },
+  ],
   variable: "--font-body",
   display: "swap",
 });
