@@ -32,6 +32,40 @@ const values = [
   },
 ];
 
+function AboutCard({
+  title,
+  text,
+  level,
+  tone,
+}: {
+  title: string;
+  text: string;
+  level: "h2" | "h3";
+  tone: "white" | "mist";
+}) {
+  const Title = level;
+  return (
+    <article
+      className={`group relative h-full overflow-hidden rounded-2xl border border-brand-line p-6 transition duration-300 ease-out hover:-translate-y-1.5 hover:border-brand/35 hover:shadow-[0_22px_48px_rgb(150_17_111/0.12)] motion-reduce:transform-none ${
+        tone === "white" ? "bg-white" : "bg-brand-mist hover:bg-white"
+      }`}
+    >
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-0.5 origin-left scale-x-0 bg-gradient-to-r from-brand to-brand-pink transition-transform duration-500 ease-out group-hover:scale-x-100 motion-reduce:transition-none"
+      />
+      <span
+        aria-hidden
+        className="pointer-events-none absolute -right-8 -top-10 h-28 w-28 rounded-full bg-brand-pink/0 blur-2xl transition duration-500 group-hover:bg-brand-pink/30 motion-reduce:transition-none"
+      />
+      <Title className={`relative font-display font-semibold text-brand-plum transition-colors duration-300 group-hover:text-brand ${level === "h2" ? "text-3xl" : "text-2xl"}`}>
+        {title}
+      </Title>
+      <p className={`relative text-muted-foreground transition-colors duration-300 group-hover:text-brand-plum/80 ${level === "h2" ? "mt-4 leading-8" : "mt-3 leading-7"}`}>{text}</p>
+    </article>
+  );
+}
+
 export const metadata = pageMetadata({
   title: "About Viola Brows and Beauty",
   description: "Viola Brows and Beauty is a permanent makeup studio and beauty training institute in Addis Ababa, home of Viola Beauty Institute and a monthly scholarship.",
@@ -80,16 +114,20 @@ export default async function AboutPage() {
 
         <section className="mx-auto grid max-w-5xl gap-5 px-4 py-14 sm:px-6 md:grid-cols-2">
           <Reveal>
-            <article className="h-full rounded-2xl border border-brand-line bg-white p-6">
-              <h2 className="font-display text-3xl font-semibold text-brand-plum">Our Mission</h2>
-              <p className="mt-4 leading-8 text-muted-foreground">To give every client quality, precision and care, and to train individuals with professional beauty skills that help them build independent, sustainable livelihoods.</p>
-            </article>
+            <AboutCard
+              level="h2"
+              tone="white"
+              title="Our Mission"
+              text="To give every client quality, precision and care, and to train individuals with professional beauty skills that help them build independent, sustainable livelihoods."
+            />
           </Reveal>
           <Reveal delay={90}>
-            <article className="h-full rounded-2xl border border-brand-line bg-white p-6">
-              <h2 className="font-display text-3xl font-semibold text-brand-plum">Our Vision</h2>
-              <p className="mt-4 leading-8 text-muted-foreground">To be Ethiopia&apos;s leading permanent makeup studio and beauty training institute, known for international standards and for the people we help build careers in the beauty industry.</p>
-            </article>
+            <AboutCard
+              level="h2"
+              tone="white"
+              title="Our Vision"
+              text="To be Ethiopia's leading permanent makeup studio and beauty training institute, known for international standards and for the people we help build careers in the beauty industry."
+            />
           </Reveal>
         </section>
 
@@ -100,10 +138,7 @@ export default async function AboutPage() {
             <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {values.map((value, index) => (
                 <Reveal key={value.title} delay={(index % 3) * 80} className="h-full">
-                  <article className="h-full rounded-2xl border border-brand-line bg-brand-mist p-6">
-                    <h3 className="font-display text-2xl font-semibold text-brand-plum">{value.title}</h3>
-                    <p className="mt-3 leading-7 text-muted-foreground">{value.text}</p>
-                  </article>
+                  <AboutCard level="h3" tone="mist" title={value.title} text={value.text} />
                 </Reveal>
               ))}
             </div>
